@@ -1,0 +1,33 @@
+syntax = "proto3";
+package slip_proto;
+
+message OutputID {
+    bytes tx_id = 1;
+    uint32 slip_ordinal = 2;
+}
+
+message Output {
+    bytes receiver = 1;
+    uint64 amount = 2;
+}
+
+message TransactionProto {
+    uint64 timestamp = 1;
+    repeated OutputID inputs = 2;
+    repeated Output outputs = 3;
+    enum TxType {
+        NORMAL = 0;
+        SERVICE = 1;
+    }
+    TxType txtype = 4;
+    bytes message = 5;
+}
+message BlockProto {
+    uint64 id = 1;
+    uint64 timestamp = 2;
+    bytes previous_block_hash = 3;
+    bytes creator = 4;
+    bytes signature = 5;
+    uint64 treasury = 6;
+    uint64 start_burnfee = 7;
+}

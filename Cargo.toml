@@ -1,0 +1,51 @@
+[package]
+name = "pandacoin"
+version = "0.1.0"
+edition = "2018"
+authors = [
+    "Clayton Rabenda <claytonrabenda@gmail.com>",
+]
+default-run = "pandacoin"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "force-build" # useful to build protos, forces build.rs to run
+path = "build.rs"
+required-features = ["build_deps"]  # only needed for build-dependencies
+
+[dependencies]
+
+# aes = "0.7.4"
+# base58 = "0.1.0"
+# bincode = "1.3"
+# blake3 = { version = "0.3.8", features = ["rayon"] }
+# block-modes = "0.8.1"
+# chrono = "0.4"
+# clap = "3.0.0-beta.2"
+dashmap = "4.0.2"
+hex = "0.4.3"
+lazy_static = "1.4.0"
+log = "0.4.14"
+prost = "0.7"
+prost-build = { version = "0.7", optional = true } # optional for the force-build bin
+# Only necessary if using Protobuf well-known types:
+prost-types = "0.7"
+# rand = "0.8.3"
+# rayon = "1.5"
+rpassword = "5.0"
+# secp256k1 = { version = "0.20.2", features = ["global-context"] }
+
+secp256k1 = { version = "0.20.3", features = ["global-context"] }
+# sha2 = "0.9.5"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.2"
+# warp = "0.3"
+
+[build-dependencies]
+prost-build = { version = "0.7" }
+
+[features]
+test-utilities = []
+build_deps = ["prost-build"]
