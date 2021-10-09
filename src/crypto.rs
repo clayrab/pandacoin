@@ -1,4 +1,10 @@
+use base58::FromBase58;
+use blake3::{join::RayonJoin, Hasher};
 pub use secp256k1::{Message, PublicKey, Signature, SECP256K1};
+use sha2::{Digest, Sha256};
+use std::convert::TryInto;
+
+use crate::types::Sha256Hash;
 pub const PARALLEL_HASH_BYTE_THRESHOLD: usize = 128_000;
 
 /// Hash the message string with sha256 for signing by secp256k1 and return as byte array

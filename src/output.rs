@@ -1,19 +1,19 @@
 use std::{convert::TryInto, hash::{Hash, Hasher}};
-use crate::{protos::{OutputId, Output}, types::{PandaAddress, Sha256Hash}};
+use crate::{panda_protos::{OutputIdProto, OutputProto}, types::{PandaAddress, Sha256Hash}};
 use secp256k1::PublicKey;
 
 /// A record of owernship of funds on the network
-impl Hash for OutputId {
+impl Hash for OutputIdProto {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.slip_ordinal.to_ne_bytes());
         state.write(&self.tx_id)
     }
 }
 
-impl OutputId {
-    /// Create new `OutputId`
+impl OutputIdProto {
+    /// Create new `OutputIdProto`
     pub fn new(tx_id: Sha256Hash, slip_ordinal: u32) -> Self {
-        OutputId {
+        OutputIdProto {
             tx_id: tx_id.to_vec(),
             slip_ordinal: slip_ordinal,
         }
@@ -30,10 +30,9 @@ impl OutputId {
     }
 }
 
-impl Output {
-    /// Create new `OutputSlip`
-    pub fn new(address: PublicKey, amount: u64) -> Output {
-        Output {
+impl OutputProto {
+    pub fn new(address: PublicKey, amount: u64) -> OutputProto {
+        OutputProto {
             receiver: address.serialize().to_vec(),
             amount: amount,
         }

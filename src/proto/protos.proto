@@ -1,20 +1,20 @@
 syntax = "proto3";
-package slip_proto;
+package panda_protos;
 
-message OutputID {
+message OutputIDProto {
     bytes tx_id = 1;
     uint32 slip_ordinal = 2;
 }
 
-message Output {
+message OutputProto {
     bytes receiver = 1;
     uint64 amount = 2;
 }
 
 message TransactionProto {
     uint64 timestamp = 1;
-    repeated OutputID inputs = 2;
-    repeated Output outputs = 3;
+    repeated OutputIDProto inputs = 2;
+    repeated OutputProto outputs = 3;
     enum TxType {
         NORMAL = 0;
         SERVICE = 1;
@@ -22,12 +22,15 @@ message TransactionProto {
     TxType txtype = 4;
     bytes message = 5;
 }
-message BlockProto {
-    uint64 id = 1;
-    uint64 timestamp = 2;
-    bytes previous_block_hash = 3;
-    bytes creator = 4;
-    bytes signature = 5;
-    uint64 treasury = 6;
-    uint64 start_burnfee = 7;
+
+message RawBlockProto {
+    optional bytes hash = 1;
+    optional uint64 block_fee = 2;
+    uint32 id = 3;
+    uint64 timestamp = 4;
+    bytes previous_block_hash = 5;
+    bytes creator = 6;
+    bytes signature = 7;
+    bytes merkle_root = 8;
+    repeated TransactionProto transactions = 9;
 }
