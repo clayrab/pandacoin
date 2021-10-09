@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MockTimestampGenerator","This is a mock impl of TimestampGenerator which can be used during test to replace the global TimestampGenerator in order to mock system time."]]});

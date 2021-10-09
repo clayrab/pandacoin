@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["pandacoin"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.55.0/core/cmp/trait.Eq.html\" title=\"trait core::cmp::Eq\">Eq</a> for <a class=\"enum\" href=\"pandacoin/panda_protos/transaction_proto/enum.TxType.html\" title=\"enum pandacoin::panda_protos::transaction_proto::TxType\">TxType</a>","synthetic":false,"types":["pandacoin::panda_protos::transaction_proto::TxType"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
