@@ -7,7 +7,6 @@ extern crate prost_build;
 const EPOCH_LENGTH: i64 = 1000;
 
 fn main() {
-    prost_build::compile_protos(&["src/proto/protos.proto"], &["src/"]).unwrap();
     write_epoch_length_to_constants();
 }
 

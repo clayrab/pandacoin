@@ -1,7 +1,12 @@
 pub mod block;
 pub mod block_fee;
+pub mod blockchain;
 pub mod crypto;
-pub mod protos;
+pub mod forktree;
+pub mod keypair;
+pub mod longest_chain_queue;
+#[path = "proto/out/panda_protos.rs"]
+pub mod panda_protos;
 pub mod output;
 pub mod timestamp_generator;
 pub mod transaction;
@@ -9,6 +14,7 @@ pub mod types;
 
 pub mod test_utilities;
 
+// pub mod src/proto/out/p;
 // 
 // Not sure what the purpose of this was, I suspect that if we didn't need to use Eq on the proto, this would be useful.
 //
