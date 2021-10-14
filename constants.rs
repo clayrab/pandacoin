@@ -1,1 +1,0 @@
-const EPOCH_LENGTH: u64 = 1000;
