@@ -26,101 +26,36 @@
 <span id="26">26</span>
 <span id="27">27</span>
 <span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
-<span id="37">37</span>
-<span id="38">38</span>
-<span id="39">39</span>
-<span id="40">40</span>
-<span id="41">41</span>
-<span id="42">42</span>
-<span id="43">43</span>
-<span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
-<span id="47">47</span>
-<span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
-<span id="51">51</span>
-<span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
 </pre><pre class="rust">
-<span class="comment">// use crate::block::RawBlock;</span>
-<span class="comment">// use crate::block_fee::BlockFee;</span>
-<span class="comment">// use crate::keypair::Keypair;</span>
-<span class="comment">// use crate::panda_protos::TransactionProto;</span>
-<span class="comment">// use crate::types::Sha256Hash;</span>
+<span class="kw">use</span> <span class="ident">std::str::FromStr</span>;
 
-<span class="comment">// // let public_key: PublicKey = PublicKey::from_str(</span>
-<span class="comment">// //     &quot;0225ee90fc71570613b42e29912a760bb0b2da9182b2a4271af9541b7c5e278072&quot;,</span>
-<span class="comment">// // )</span>
-<span class="comment">// // .unwrap();</span>
-<span class="comment">// // let timestamp = create_timestamp();</span>
-<span class="comment">// // let block_core = BlockCore::new(</span>
-<span class="comment">// //     block_id,</span>
-<span class="comment">// //     timestamp,</span>
-<span class="comment">// //     previous_block_hash,</span>
-<span class="comment">// //     public_key,</span>
-<span class="comment">// //     TREASURY,</span>
-<span class="comment">// //     0,</span>
-<span class="comment">// //     transactions,</span>
-<span class="comment">// // );</span>
-<span class="comment">// // Block::new(block_core)</span>
-<span class="comment">// use crate::panda_protos::transaction_proto::TxType;</span>
-<span class="comment">// use crate::{protos::{OutputId, Output}, types::{PandaAddress}};</span>
-<span class="comment">// use crate::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL;</span>
+<span class="kw">use</span> <span class="ident">secp256k1</span>::{<span class="ident">PublicKey</span>, <span class="ident">Signature</span>};
 
-<span class="comment">// pub fn make_mock_block(</span>
-<span class="comment">//     prev_timestamp: u64,</span>
-<span class="comment">//     previous_burnfee: u64,</span>
-<span class="comment">//     previous_previous_burnfee: u64,</span>
-<span class="comment">//     previous_block_hash: Sha256Hash,</span>
-<span class="comment">//     previous_block_id: u64,</span>
-<span class="comment">//     from_slip: Option&lt;OutputId&gt;,</span>
-<span class="comment">// ) -&gt; RawBlock {</span>
-<span class="comment">//     let step: u64 = 10000;</span>
-<span class="comment">//     let keypair = Keypair::new();</span>
-<span class="comment">//     let timestamp = prev_timestamp + step;</span>
-<span class="comment">//     let mut txs = vec![];</span>
-<span class="comment">//     if !from_slip.is_none() {</span>
-<span class="comment">//         let to_slip = Output::new(keypair.public_key().clone(), 10);</span>
-<span class="comment">//         let tx_core = TransactionProto::new(</span>
-<span class="comment">//             TIMESTAMP_GENERATOR_GLOBAL.get_timestamp(),</span>
-<span class="comment">//             vec![from_slip.unwrap().clone()],</span>
-<span class="comment">//             vec![to_slip.clone()],</span>
-<span class="comment">//             TxType::Normal,</span>
-<span class="comment">//             vec![104, 101, 108, 108, 111],</span>
-<span class="comment">//         );</span>
-<span class="comment">//         txs.push(Transaction::sign(tx_core));</span>
-<span class="comment">//     }</span>
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">block::RawBlock</span>, <span class="ident">types::Sha256Hash</span>};
 
-<span class="comment">//     //Block::new_mock(previous_block_hash, vec![tx.clone()], previous_block_id + 1)</span>
-<span class="comment">//     let block_core = RawBlock::new(</span>
-<span class="comment">//         previous_block_id + 1,</span>
-<span class="comment">//         timestamp,</span>
-<span class="comment">//         previous_block_hash,</span>
-<span class="comment">//         keypair.public_key().clone(),</span>
-<span class="comment">//         0,</span>
-<span class="comment">//         burnfee,</span>
-<span class="comment">//         txs,</span>
-<span class="comment">//     );</span>
-<span class="comment">//     Block::new(block_core)</span>
-<span class="comment">// }</span></pre></div>
+
+<span class="doccomment">/// This Mock RawBlock is used for testing Block Fee</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MockRawBlockForBlockFee</span> {
+    <span class="ident">block_fee</span>: <span class="ident">u64</span>,
+    <span class="ident">timestamp</span>: <span class="ident">u64</span>,
+}
+<span class="kw">impl</span> <span class="ident">MockRawBlockForBlockFee</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">block_fee</span>: <span class="ident">u64</span>, <span class="ident">timestamp</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">MockRawBlockForBlockFee</span> {
+            <span class="ident">block_fee</span>,
+            <span class="ident">timestamp</span>,
+        }
+    }
+}
+<span class="kw">impl</span> <span class="ident">RawBlock</span> <span class="kw">for</span> <span class="ident">MockRawBlockForBlockFee</span> {
+    <span class="kw">fn</span> <span class="ident">get_block_fee</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">block_fee</span>
+    }
+    <span class="kw">fn</span> <span class="ident">get_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">timestamp</span>
+    }
+}
+</pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="pandacoin" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
     <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>
 </body></html>

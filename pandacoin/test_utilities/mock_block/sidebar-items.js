@@ -1,1 +1,1 @@
-initSidebarItems({});
+initSidebarItems({"struct":[["MockRawBlockForBlockFee","This Mock RawBlock is used for testing Block Fee"]]});
