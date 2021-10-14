@@ -48,17 +48,17 @@ impl Keypair {
     }
 
     /// Get the public key of the keypair in base58(i.e. address) format
-    pub fn address(&self) -> String {
+    pub fn get_address(&self) -> String {
         self.public_key.serialize().to_base58()
     }
 
     /// Get the public key of the keypair as secp256k1::key::PublicKey
-    pub fn public_key(&self) -> &PublicKey {
+    pub fn get_public_key(&self) -> &PublicKey {
         &self.public_key
     }
 
     /// Get the private key as a hex-encoded string
-    pub fn secret_key(&self) -> &SecretKey {
+    pub fn get_secret_key(&self) -> &SecretKey {
         &self.secret_key
     }
 
@@ -85,7 +85,7 @@ impl Keypair {
 impl fmt::Display for Keypair {
     /// formats a Keypair for println!
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let pubkey = self.public_key();
+        let pubkey = self.get_public_key();
         write!(f, "pubkey:{} privkey:{}", pubkey, self.secret_key)
     }
 }
@@ -119,11 +119,11 @@ mod test {
         let mock_secret_key = "da79fe6d86347e8f8dc71eb3dbab9ba5623eaaed6c5dd0bb257c0d631faaff16";
         let keypair = Keypair::from_secret_hex(mock_secret_key).unwrap();
         let mut pubkey_string = String::new();
-        assert!(write!(&mut pubkey_string, "{:?}", keypair.public_key()).is_ok());
-        assert_eq!(keypair.secret_key().to_string(), mock_secret_key);
+        assert!(write!(&mut pubkey_string, "{:?}", keypair.get_public_key()).is_ok());
+        assert_eq!(keypair.get_secret_key().to_string(), mock_secret_key);
         assert_eq!(pubkey_string, "PublicKey(7280275e7c1b54f91a27a4b28291dab2b00b762a91292eb413065771fc90ee2552022d1fc27557465a8e86c147fff767b414495008b904dcdab490992add99a5)");
         assert_eq!(
-            keypair.address(),
+            keypair.get_address(),
             "e1hpHsuiRPbzXdCf7smXvAFCnqpvZXcjtxZLMxcATat1"
         );
 
@@ -134,7 +134,7 @@ mod test {
     #[test]
     fn keypair_new_test() {
         let keypair = Keypair::new();
-        assert_eq!(keypair.address().len(), 44);
-        assert_eq!(keypair.secret_key().to_string().len(), 64);
+        assert_eq!(keypair.get_address().len(), 44);
+        assert_eq!(keypair.get_secret_key().to_string().len(), 64);
     }
 }

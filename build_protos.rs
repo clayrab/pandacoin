@@ -16,5 +16,4 @@ fn main() {
     prost_build::compile_protos(&["src/proto/protos.proto"], &["src/"]).unwrap();
     println!("SLIPS HAVE BEEN COMPILED TO ./src/proto/out");
     println!("OUTPUT AND OUTPUTID PROTOS MUST HAVE 'Eq' ADDED TO THEIR derive() MACROS!");
-
 }

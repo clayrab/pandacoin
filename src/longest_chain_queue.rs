@@ -1,10 +1,5 @@
 use crate::types::Sha256Hash;
 
-
-//include!(concat!(env!("OUT_DIR"), "/constants.rs"));
-
-//const RING_BUFFER_LENGTH: u64 = 2 * EPOCH_LENGTH;
-
 #[derive(Debug, Clone)]
 pub struct LongestChainQueue {
     block_hashes: Vec<Sha256Hash>,
@@ -34,8 +29,12 @@ impl LongestChainQueue {
         self.block_hashes.len() as u32
     }
 
-    pub fn latest_block_hash(&self) -> &Sha256Hash {
-        &self.block_hashes[self.block_hashes.len()]
+    pub fn latest_block_hash(&self) -> Option<&Sha256Hash> {
+        if self.block_hashes.is_empty() {
+            None
+        } else {
+            Some(&self.block_hashes[self.block_hashes.len()])
+        }
     }
 
     pub fn contains_hash_by_block_id(&self, hash: &Sha256Hash, block_id: u32) -> bool {
