@@ -9,14 +9,14 @@ impl LongestChainQueue {
     /// Create new `LongestChainQueue`
     pub fn new() -> Self {
         LongestChainQueue {
-            block_hashes: vec![]
+            block_hashes: vec![],
         }
     }
-    
+
     pub fn roll_back(&mut self) -> Sha256Hash {
         self.block_hashes.pop().unwrap()
     }
-    
+
     pub fn roll_forward(&mut self, new_block_hash: &Sha256Hash) {
         self.block_hashes.push(new_block_hash.clone());
     }
@@ -46,7 +46,5 @@ impl LongestChainQueue {
 mod test {
 
     #[test]
-    fn longest_chain_queue_test() {
-     
-    }
+    fn longest_chain_queue_test() {}
 }

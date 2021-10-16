@@ -1,10 +1,8 @@
 use crate::panda_protos::{OutputIdProto, OutputProto};
 
-use crate::panda_protos::TransactionProto;
 use crate::panda_protos::transaction_proto::TxType;
+use crate::panda_protos::TransactionProto;
 impl TransactionProto {
-
-
     /// Creates new `Transaction`
     ///
     /// * `broadcast_type` - `TransactionType` of the new `Transaction`

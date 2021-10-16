@@ -14,34 +14,16 @@ use crate::keypair::Keypair;
 use aes::Aes128;
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
-use clap::Clap;
+use once_cell::sync::OnceCell;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Read;
 use std::path::Path;
 
-lazy_static! {
-    /// A global reference to the KeypairStore
-    pub static ref KEYPAIRSTORE_GLOBAL: KeypairStore = KeypairStore::new();
-}
+pub static KEYPAIRSTORE_GLOBAL: OnceCell<KeypairStore> = OnceCell::new();
 
 // create an alias for convenience
 type Aes128Cbc = Cbc<Aes128, Pkcs7>;
-
-// cargo run -- --help
-// cargo run -- --key-path boom.txt
-
-// This is the Clap options structure which stores all command line flags passed by the user to the application
-// // This should be moved to it's own module, but at the moment it is only used by KeypairStore.
-// #[derive(Clap, Debug)]
-// #[clap(name = "bkc_rust")]
-// struct CommandLineOpts {
-//     /// Path to key-file
-//     #[clap(short, long, default_value = "./keyFile")]
-//     key_path: String,
-//     #[clap(short, long)]
-//     password: Option<String>,
-// }
 
 /// This manages a keypair for the user through a CLI. It will encrypt, decrypt, and store a single keypair which the node
 /// will use for signing and as the keypair for a wallet to receive rewards and to receive mini-blocks.
@@ -54,22 +36,32 @@ pub struct KeypairStore {
 impl KeypairStore {
     /// Create new `KeypairStore`.
     pub fn new() -> Self {
-        //let opts = COMMAND_LINE_OPTS_GLOBAL;
-        let path = Path::new(&COMMAND_LINE_OPTS_GLOBAL.key_path);
+        let path = Path::new(&COMMAND_LINE_OPTS_GLOBAL.get().unwrap().key_path);
         let decrypted_buffer: Vec<u8>;
-
         if !path.exists() {
             println!("Creating key file");
-            decrypted_buffer = KeypairStore::create_key_file(&COMMAND_LINE_OPTS_GLOBAL.key_path, &COMMAND_LINE_OPTS_GLOBAL.password);
+            decrypted_buffer = KeypairStore::create_key_file(
+                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().key_path,
+                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().password,
+            );
         } else {
             println!("Reading key file");
-            decrypted_buffer = KeypairStore::read_key_file(&COMMAND_LINE_OPTS_GLOBAL.key_path, &COMMAND_LINE_OPTS_GLOBAL.password);
+            decrypted_buffer = KeypairStore::read_key_file(
+                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().key_path,
+                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().password,
+            );
         }
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
-        println!("{:?}", keypair.get_address());
         KeypairStore { keypair: keypair }
     }
-
+    /// Create new `KeypairStore` for testing from existing wallet in test data.
+    pub fn new_mock() -> Self {
+        let decrypted_buffer: Vec<u8>;
+        decrypted_buffer =
+            KeypairStore::read_key_file(&"data/test/testwallet", &Some(String::from("asdf")));
+        let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
+        KeypairStore { keypair: keypair }
+    }
     /// get the keypair
     pub fn get_keypair(&self) -> &Keypair {
         &self.keypair
@@ -123,5 +115,28 @@ impl KeypairStore {
         key.clone_from_slice(&hash[0..16]);
         iv.clone_from_slice(&hash[16..32]);
         (key, iv)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::test_utilities::init_globals_for_tests;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn mock_keypair_store_test() {
+        init_globals_for_tests();
+        assert_eq!(
+            "02fc238df3474c274887f85b3f36d3adffa5465f15840779da6fc82f912c4d1009",
+            hex::encode(
+                KEYPAIRSTORE_GLOBAL
+                    .get()
+                    .unwrap()
+                    .get_keypair()
+                    .get_public_key()
+                    .serialize()
+            )
+        );
     }
 }

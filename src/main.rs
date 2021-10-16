@@ -1,17 +1,25 @@
-use std::env;
-use clap::{App, Arg};
+use clap::Clap;
+use log::{debug, error, info, warn};
+use pandacoin::keypair_store::{KeypairStore, KEYPAIRSTORE_GLOBAL};
 use pandacoin::panda_protos::RawBlockProto;
-use pandacoin::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL;
+use pandacoin::timestamp_generator::{SystemTimestampGenerator, TIMESTAMP_GENERATOR_GLOBAL};
+use std::env;
 use tokio::signal;
-use tracing::{Level, event};
+use tracing::{event, Level};
 use tracing_subscriber;
-use log::{info, warn, debug, error};
 
-use pandacoin::command_line_opts::COMMAND_LINE_OPTS_GLOBAL;
 use pandacoin::blockchain::{AddBlockEvent, BLOCKCHAIN_GLOBAL};
+use pandacoin::command_line_opts::{CommandLineOpts, COMMAND_LINE_OPTS_GLOBAL};
 
 #[tokio::main]
 pub async fn main() -> pandacoin::Result<()> {
+    KEYPAIRSTORE_GLOBAL.set(KeypairStore::new()).unwrap();
+    COMMAND_LINE_OPTS_GLOBAL
+        .set(CommandLineOpts::parse())
+        .unwrap();
+    TIMESTAMP_GENERATOR_GLOBAL
+        .set(Box::new(SystemTimestampGenerator::new()))
+        .unwrap();
     println!("WELCOME TO PANDA COIN!");
     if env::var("RUST_LOG").is_err() {
         println!("Setting Log Level to INFO. Use RUST_LOG=[level] to set. Accepts trace, info, debug, warn, error.");
@@ -19,17 +27,25 @@ pub async fn main() -> pandacoin::Result<()> {
     }
     tracing_subscriber::fmt::init();
 
-    event!(
-        Level::INFO,
-        "Node Started"
-    );
+    event!(Level::INFO, "Node Started");
 
     debug!("this is a debug {}", "message");
     warn!("this is a warniig");
-    info!("this is info {}", TIMESTAMP_GENERATOR_GLOBAL.get_timestamp());
+    info!(
+        "this is info {}",
+        TIMESTAMP_GENERATOR_GLOBAL.get().unwrap().get_timestamp()
+    );
     error!("this is printed by default");
-    
-    if COMMAND_LINE_OPTS_GLOBAL.genesis {
+
+    println!(
+        "Key: {}",
+        KEYPAIRSTORE_GLOBAL
+            .get()
+            .unwrap()
+            .get_keypair()
+            .get_public_key()
+    );
+    if COMMAND_LINE_OPTS_GLOBAL.get().unwrap().genesis {
         println!("***********************************************");
         println!("******************** GENESIS ******************");
         println!("***********************************************");

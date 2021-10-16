@@ -1,7 +1,7 @@
 use crate::{panda_protos::RawBlockProto, types::Sha256Hash};
 use std::collections::HashMap;
 
-/// This class is used to store all blocks in a tree structure. We simply use the RawBlock's previous_block_hash 
+/// This class is used to store all blocks in a tree structure. We simply use the RawBlock's previous_block_hash
 /// as a pointer to the parent node.
 #[derive(Debug)]
 pub struct ForkTree {
@@ -16,7 +16,11 @@ impl ForkTree {
         }
     }
 
-    pub fn insert(&mut self, block_hash: Sha256Hash, block: RawBlockProto) -> Option<&RawBlockProto> {
+    pub fn insert(
+        &mut self,
+        block_hash: Sha256Hash,
+        block: RawBlockProto,
+    ) -> Option<&RawBlockProto> {
         self.fork_tree.insert(block_hash, block);
         self.fork_tree.get(&block_hash)
     }
@@ -38,7 +42,6 @@ impl ForkTree {
 mod test {
 
     // use super::*;
-
 
     // #[test]
     // fn fork_tree_insert_remove_test() {

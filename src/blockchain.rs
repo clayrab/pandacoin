@@ -1,7 +1,7 @@
 use crate::block::RawBlock;
-use crate::panda_protos::RawBlockProto;
 use crate::forktree::ForkTree;
-use crate::longest_chain_queue::{LongestChainQueue};
+use crate::longest_chain_queue::LongestChainQueue;
+use crate::panda_protos::RawBlockProto;
 use crate::types::Sha256Hash;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -74,7 +74,7 @@ impl Blockchain {
         self.fork_tree.contains_block_hash(block_hash)
     }
 
-    fn find_fork_chains(&self, block: & dyn RawBlock) -> ForkChains {
+    fn find_fork_chains(&self, block: &dyn RawBlock) -> ForkChains {
         let mut old_chain = vec![];
         let mut new_chain = vec![];
 
@@ -106,7 +106,7 @@ impl Blockchain {
         let ancestor_block = target_block.clone();
         let mut i: u32 = self.longest_chain_queue.latest_block_id();
         // TODO do this in a more rusty way
-            
+
         while i > ancestor_block.get_id() {
             let hash = self.longest_chain_queue.block_hash_by_id(i);
             let block = self.fork_tree.block_by_hash(&hash).unwrap();
@@ -132,7 +132,6 @@ impl Blockchain {
         } else if !is_first_block && !self.contains_block_hash(&block.get_previous_block_hash()) {
             AddBlockEvent::ParentNotFound
         } else {
-            
             let fork_chains: ForkChains = self.find_fork_chains(&block);
             if !self.validate_block(&block, &fork_chains) {
                 AddBlockEvent::InvalidBlock
@@ -140,7 +139,6 @@ impl Blockchain {
                 let latest_block_hash = self.longest_chain_queue.latest_block_hash();
                 let is_new_lc_tip = latest_block_hash == Some(&block.get_previous_block_hash());
                 if is_first_block || is_new_lc_tip {
-                   
                     // First Block or we'e new tip of the longest chain
                     self.longest_chain_queue.roll_forward(&block.get_hash());
                     // UTXOSET_GLOBAL.clone().write().unwrap().roll_forward(&block);
@@ -149,24 +147,28 @@ impl Blockchain {
                     //     .write()
                     //     .unwrap()
                     //     .roll_forward(&block.core());
-                
-                    let _stored_block = self.fork_tree.insert(block.get_hash().clone(), block).unwrap();
-                    
+
+                    let _stored_block = self
+                        .fork_tree
+                        .insert(block.get_hash().clone(), block)
+                        .unwrap();
 
                     // self.storage.roll_forward(&block).await;
-
 
                     AddBlockEvent::AcceptedAsLongestChain
                 } else {
                     // We are not on the longest chain
                     if self.is_longer_chain(&fork_chains.new_chain, &fork_chains.old_chain) {
-                        self.fork_tree.insert(block.get_hash().clone(), block).unwrap();
+                        self.fork_tree
+                            .insert(block.get_hash().clone(), block)
+                            .unwrap();
                         // Unwind the old chain
                         // fork_chains.old_chain.iter().map(|hash| {
                         //     self.longest_chain_queue.roll_back();
                         // });
                         for block_hash in fork_chains.old_chain.iter() {
-                            let block: &RawBlockProto = self.fork_tree.block_by_hash(block_hash).unwrap();
+                            let block: &RawBlockProto =
+                                self.fork_tree.block_by_hash(block_hash).unwrap();
                             self.longest_chain_queue.roll_back();
                             // UTXOSET_GLOBAL.clone().write().unwrap().roll_back(block);
                             // SLIP_DB_GLOBAL
@@ -179,7 +181,8 @@ impl Blockchain {
 
                         // Wind up the new chain
                         for block_hash in fork_chains.new_chain.iter().rev() {
-                            let block: &RawBlockProto = self.fork_tree.block_by_hash(block_hash).unwrap();
+                            let block: &RawBlockProto =
+                                self.fork_tree.block_by_hash(block_hash).unwrap();
                             // self.longest_chain_queue.roll_forward(&block.get_hash());
                             // self.longest_chain_queue.roll_forward(&block.get_hash());
                             // UTXOSET_GLOBAL.clone().write().unwrap().roll_forward(block);
@@ -199,7 +202,9 @@ impl Blockchain {
                         //     .write()
                         //     .unwrap()
                         //     .roll_forward_on_fork(&block);
-                        self.fork_tree.insert(block.get_hash().clone(), block).unwrap();
+                        self.fork_tree
+                            .insert(block.get_hash().clone(), block)
+                            .unwrap();
                         AddBlockEvent::Accepted
                     }
                 }
@@ -232,7 +237,7 @@ impl Blockchain {
             }
 
             let previous_block = self.fork_tree.block_by_hash(&previous_block_hash).unwrap();
-            
+
             // TODO validate block fee
 
             if previous_block.get_timestamp() >= block.get_timestamp() {
@@ -332,6 +337,4 @@ impl Blockchain {
 }
 
 #[cfg(test)]
-mod tests {
-
-}
+mod tests {}

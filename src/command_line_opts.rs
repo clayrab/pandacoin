@@ -1,17 +1,9 @@
 use clap::Clap;
-// // cargo run -- --help
-// // cargo run -- --key-path boom.txt
+use once_cell::sync::OnceCell;
 
-// //CommandLineOpts::parse();
-
-//CommandLineOpts
-lazy_static! {
-    /// A global reference to the KeypairStore
-    pub static ref COMMAND_LINE_OPTS_GLOBAL: CommandLineOpts = CommandLineOpts::parse();
-}
+pub static COMMAND_LINE_OPTS_GLOBAL: OnceCell<CommandLineOpts> = OnceCell::new();
 
 /// This is the Clap options structure which stores all command line flags passed by the user to the application
-// This should be moved to it's own module, but at the moment it is only used by KeypairStore.
 #[derive(Clap, Debug)]
 #[clap(name = "pandacoin")]
 pub struct CommandLineOpts {
@@ -22,4 +14,22 @@ pub struct CommandLineOpts {
     pub password: Option<String>,
     #[clap(short, long)]
     pub genesis: bool,
+
+    #[clap(short, long)]
+    pub nocapture: bool,
+}
+#[cfg(test)]
+mod test {
+    use crate::test_utilities::init_globals_for_tests;
+
+    use super::*;
+    #[test]
+    fn test_complete_name() {
+        // Make sure COMMAND_LINE_OPTS_GLOBAL is properly initialized for test environment
+        init_globals_for_tests();
+        assert_eq!(
+            Some(String::from("asdf")),
+            COMMAND_LINE_OPTS_GLOBAL.get().unwrap().password
+        );
+    }
 }
