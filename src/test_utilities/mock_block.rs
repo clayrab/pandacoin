@@ -1,9 +1,4 @@
-use std::str::FromStr;
-
-use secp256k1::{PublicKey, Signature};
-
-use crate::{block::RawBlock, types::Sha256Hash};
-
+use crate::block::RawBlock;
 
 /// This Mock RawBlock is used for testing Block Fee
 pub struct MockRawBlockForBlockFee {

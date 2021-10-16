@@ -609,6 +609,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "log",
+ "once_cell",
  "prost",
  "prost-build",
  "prost-types",

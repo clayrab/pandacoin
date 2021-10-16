@@ -1,6 +1,12 @@
-use std::{convert::TryInto, hash::{Hash, Hasher}};
-use crate::{panda_protos::{OutputIdProto, OutputProto}, types::{PandaAddress, Sha256Hash}};
+use crate::{
+    panda_protos::{OutputIdProto, OutputProto},
+    types::{PandaAddress, Sha256Hash},
+};
 use secp256k1::PublicKey;
+use std::{
+    convert::TryInto,
+    hash::{Hash, Hasher},
+};
 
 /// A record of owernship of funds on the network
 impl Hash for OutputIdProto {

@@ -1,0 +1,3 @@
+#!/bin/bash
+rm ./data/test/blocks/*.pandablock                                                                                    101 ✘ 
+rm ./data/blocks/*.pandablock
