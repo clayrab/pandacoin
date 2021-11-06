@@ -8,23 +8,23 @@ pub mod forktree;
 pub mod keypair;
 pub mod keypair_store;
 pub mod longest_chain_queue;
+pub mod output;
 #[path = "proto/out/panda_protos.rs"]
 pub mod panda_protos;
-pub mod output;
 pub mod timestamp_generator;
 pub mod transaction;
 pub mod types;
+pub mod utxoset;
 
 pub mod test_utilities;
 
 // pub mod src/proto/out/p;
-// 
+//
 // Not sure what the purpose of this was, I suspect that if we didn't need to use Eq on the proto, this would be useful.
 //
-// pub mod slip_proto_direct {
-//     include!(concat!(env!("OUT_DIR"), "/slip_proto.rs"));
+// pub mod output_proto_direct {
+//     include!(concat!(env!("OUT_DIR"), "/output_proto.rs"));
 // }
-
 
 #[macro_use]
 extern crate lazy_static;

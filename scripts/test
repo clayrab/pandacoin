@@ -1,0 +1,6 @@
+#!/bin/bash
+# TODO Some of the threads are flakey because MockTimestampGenerator sometimes will be advanced more than is expected if another test is running in parallel
+# The solution to this is simply to run tests serially via --test-threads=1, however, it would be nice(faster) if we could implement something like 
+# is described here: https://github.com/rust-lang/rust/issues/43155 or if there is ever a #[serial] annotation added. For now, we simply must run the tests
+# with --test-threads=1
+cargo test $1 --features=test-utilities -- --nocapture --test-threads=1

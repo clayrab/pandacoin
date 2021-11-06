@@ -14,6 +14,6 @@ fn main() {
     // Enable a protoc experimental feature.
     prost_build.protoc_arg("--experimental_allow_proto3_optional");
     prost_build::compile_protos(&["src/proto/protos.proto"], &["src/"]).unwrap();
-    println!("SLIPS HAVE BEEN COMPILED TO ./src/proto/out");
+    println!("OUTPUTS HAVE BEEN COMPILED TO ./src/proto/out");
     println!("OUTPUT AND OUTPUTID PROTOS MUST HAVE 'Eq' ADDED TO THEIR derive() MACROS!");
 }

@@ -3,7 +3,7 @@ package panda_protos;
 
 message OutputIDProto {
     bytes tx_id = 1;
-    uint32 slip_ordinal = 2;
+    uint32 output_ordinal = 2;
 }
 
 message OutputProto {
@@ -12,15 +12,16 @@ message OutputProto {
 }
 
 message TransactionProto {
-    uint64 timestamp = 1;
-    repeated OutputIDProto inputs = 2;
-    repeated OutputProto outputs = 3;
+    optional bytes hash = 1;
+    uint64 timestamp = 2;
+    repeated OutputIDProto inputs = 3;
+    repeated OutputProto outputs = 4;
     enum TxType {
         NORMAL = 0;
         SERVICE = 1;
     }
-    TxType txtype = 4;
-    bytes message = 5;
+    TxType txtype = 5;
+    bytes message = 6;
 }
 
 message RawBlockProto {
