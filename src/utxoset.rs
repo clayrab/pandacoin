@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use dashmap::mapref::entry::Entry;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
@@ -16,8 +17,12 @@ lazy_static! {
     pub static ref UTXOSET_GLOBAL: Arc<std::sync::RwLock<UtxoSet>> = Arc::new(std::sync::RwLock::new(UtxoSet::new()));
 }
 
+//pub static UTXOSET_GLOBAL: OnceCell<Arc<RwLock<Box<dyn AbstractBlockchain + Send + Sync>>>> =Arc<std::sync::RwLock<UtxoSet>> = OnceCell::new();
+//pub static UTXOSET_GLOBAL: OnceCell<Arc<RwLock<Box<dyn AbstractBlockchain + Send + Sync>>>> =
+    
+
 #[derive(Debug, Clone, PartialEq)]
-enum LongestChainSpentTime {
+pub enum LongestChainSpentTime {
     BeforeUnspent,
     BetweenUnspentAndSpent,
     AfterSpent,
@@ -95,6 +100,33 @@ impl SlipSpentStatus {
     }
 }
 
+#[async_trait]
+pub trait AbstractUtxoSet {
+    fn roll_back_on_fork(&mut self, block: &Box<dyn RawBlock>);
+    fn roll_forward_on_fork(&mut self, block: &Box<dyn RawBlock>) ;
+    fn roll_back(&mut self, block: &Box<dyn RawBlock>) ;
+    fn roll_forward(&mut self, block: &Box<dyn RawBlock>) ;
+    // fn longest_chain_spent_status(
+    //     &self,
+    //     output_id: &OutputIdProto,
+    //     block_id: u32,
+    // ) -> LongestChainSpentTime;
+    async fn is_output_spendable_at_block_id(
+        &self,
+        output_id: &OutputIdProto,
+        block_id: u32,
+    ) -> bool;
+    async fn is_output_spendable_in_fork_branch(
+        &self,
+        output_id: &OutputIdProto,
+        fork_chains: &ForkChains,
+    ) -> bool;
+    fn get_total_for_inputs(&self, output_ids: Vec<OutputIdProto>) -> Option<u64> ;
+    fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>> ;
+    fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto>;
+    fn transaction_fees(&self, tx: &TransactionProto) -> u64;
+}
+
 /// A hashmap storing everything needed to validate the spendability of a output.
 /// This may be optimized in the future, but should be performant enough for the
 /// time being.
@@ -110,152 +142,6 @@ impl UtxoSet {
             status_map: DashMap::new(),
         }
     }
-    /// Removes a block from the tip of a fork chain. This is not technically needed yet,
-    /// but might be very helpful if we wanted to cleanup a fork, especially if it is a
-    /// fork of a fork.
-    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
-    /// Inputs can just be removed(delete the appropriate ForkSpent from the vector, the
-    /// ForkUnspent is still in the vector). Outputs should also have their ForkSpent removed from
-    /// the vector.
-
-    pub fn roll_back_on_fork(&mut self, block: &Box<dyn RawBlock>) {
-        block.get_transactions().par_iter().for_each(|tx| {
-            tx.outputs
-                .par_iter()
-                .enumerate()
-                .for_each(|(index, _output)| {
-                    let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
-                    let entry =
-                        self.status_map
-                            .entry(output_id)
-                            .and_modify(|output_spent_status| {
-                                output_spent_status.fork_statuses.remove(&block.get_hash());
-                            });
-                    if let Entry::Vacant(_o) = entry {
-                        panic!("Output fork status not found in hashmap!");
-                    }
-                });
-            tx.inputs
-                .par_iter()
-                .enumerate()
-                .for_each(|(_index, input)| {
-                    let entry =
-                        self.status_map
-                            .entry(input.clone())
-                            .and_modify(|output_spent_status| {
-                                output_spent_status.fork_statuses.remove(&block.get_hash());
-                            });
-                    if let Entry::Vacant(_o) = entry {
-                        panic!("Input fork status not found in hashmap!");
-                    }
-                });
-        });
-    }
-    /// Add a block to the tip of a fork.
-    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
-    /// Outputs should be added or marked as ForkUnspent, Inputs should be marked ForkSpent.
-    /// This method be called when the block is first seen but should never need to be called
-    /// during a reorg.
-    pub fn roll_forward_on_fork(&mut self, block: &Box<dyn RawBlock>) {
-        block.get_transactions().par_iter().for_each(|tx| {
-            tx.outputs.iter().enumerate().for_each(|(index, output)| {
-                let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
-                self.status_map
-                    .entry(output_id)
-                    .and_modify(|output_spent_status: &mut SlipSpentStatus| {
-                        output_spent_status
-                            .fork_statuses
-                            .insert(block.get_hash(), ForkSpentStatus::ForkUnspent);
-                    })
-                    .or_insert(SlipSpentStatus::new_on_fork(
-                        output.clone(),
-                        block.get_hash(),
-                    ));
-            });
-            // loop through inputs and mark them as ForkSpent
-            tx.inputs.iter().for_each(|input| {
-                self.status_map.entry(input.clone()).and_modify(
-                    |output_spent_status: &mut SlipSpentStatus| {
-                        output_spent_status
-                            .fork_statuses
-                            .insert(block.get_hash(), ForkSpentStatus::ForkSpent);
-                    },
-                );
-            });
-        });
-    }
-    /// Remove a block from the tip of the longest chain.
-    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
-    /// Inputs should be marked back to Unspent, Outputs should have all status set to None. We
-    /// do not delete Outputs from the hashmap because they will soon be "unspent" again when
-    /// the transaction is rolled forward in another block.
-    pub fn roll_back(&mut self, block: &Box<dyn RawBlock>) {
-        // unspend outputs and spend the inputs
-        block.get_transactions().par_iter().for_each(|tx| {
-            tx.outputs
-                .par_iter()
-                .enumerate()
-                .for_each(|(index, _output)| {
-                    let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
-                    let entry =
-                        self.status_map
-                            .entry(output_id)
-                            .and_modify(|output_spent_status| {
-                                output_spent_status.longest_chain_unspent_block_id = None;
-                            });
-                    if let Entry::Vacant(_o) = entry {
-                        panic!("Output status not found in hashmap!");
-                    }
-                });
-            tx.inputs
-                .par_iter()
-                .enumerate()
-                .for_each(|(_index, input)| {
-                    let entry =
-                        self.status_map
-                            .entry(input.clone())
-                            .and_modify(|output_spent_status| {
-                                output_spent_status.longest_chain_spent_block_id = None;
-                            });
-                    if let Entry::Vacant(_o) = entry {
-                        panic!("Input status not found in hashmap!");
-                    }
-                });
-        });
-    }
-    /// Add a block to the tip of the longest chain.
-    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
-    /// Outputs should be added or marked Unspent, Inputs should be marked Spent. This method
-    /// Can be called during a normal new block or during a reorg, so Unspent Outputs may already
-    /// be present if we're doing a reorg.
-    //pub fn roll_forward(&mut self, block: &dyn RawBlock) {
-    pub fn roll_forward(&mut self, block: &Box<dyn RawBlock>) {
-        block.get_transactions().par_iter().for_each(|tx| {
-            tx.outputs
-                .par_iter()
-                .enumerate()
-                .for_each(|(index, output)| {
-                    let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
-                    self.status_map
-                        .entry(output_id)
-                        .and_modify(|output_spent_status| {
-                            output_spent_status.longest_chain_spent_block_id = Some(block.get_id());
-                        })
-                        .or_insert(SlipSpentStatus::new_on_longest_chain(
-                            output.clone(),
-                            block.get_id(),
-                        ));
-                });
-            tx.inputs.par_iter().for_each(|input| {
-                self.status_map.entry(input.clone()).and_modify(
-                    |output_spent_status: &mut SlipSpentStatus| {
-                        output_spent_status.longest_chain_spent_block_id = Some(block.get_id());
-                    },
-                );
-            });
-        });
-    }
-
     /// Used internally in utxoset to determine the status of a output with respect
     /// to the longest chain. This is useful for validating a output on the longest
     /// chain, and also used when we are trying to determine a output's status in
@@ -306,11 +192,161 @@ impl UtxoSet {
             None => LongestChainSpentTime::AfterSpentOrNeverExisted,
         }
     }
+}
 
+#[async_trait]
+impl AbstractUtxoSet for UtxoSet {
+    /// Removes a block from the tip of a fork chain. This is not technically needed yet,
+    /// but might be very helpful if we wanted to cleanup a fork, especially if it is a
+    /// fork of a fork.
+    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
+    /// Inputs can just be removed(delete the appropriate ForkSpent from the vector, the
+    /// ForkUnspent is still in the vector). Outputs should also have their ForkSpent removed from
+    /// the vector.
+
+    fn roll_back_on_fork(&mut self, block: &Box<dyn RawBlock>) {
+        block.get_transactions().par_iter().for_each(|tx| {
+            tx.outputs
+                .par_iter()
+                .enumerate()
+                .for_each(|(index, _output)| {
+                    let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
+                    let entry =
+                        self.status_map
+                            .entry(output_id)
+                            .and_modify(|output_spent_status| {
+                                output_spent_status.fork_statuses.remove(&block.get_hash());
+                            });
+                    if let Entry::Vacant(_o) = entry {
+                        panic!("Output fork status not found in hashmap!");
+                    }
+                });
+            tx.inputs
+                .par_iter()
+                .enumerate()
+                .for_each(|(_index, input)| {
+                    let entry =
+                        self.status_map
+                            .entry(input.clone())
+                            .and_modify(|output_spent_status| {
+                                output_spent_status.fork_statuses.remove(&block.get_hash());
+                            });
+                    if let Entry::Vacant(_o) = entry {
+                        panic!("Input fork status not found in hashmap!");
+                    }
+                });
+        });
+    }
+    /// Add a block to the tip of a fork.
+    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
+    /// Outputs should be added or marked as ForkUnspent, Inputs should be marked ForkSpent.
+    /// This method be called when the block is first seen but should never need to be called
+    /// during a reorg.
+    fn roll_forward_on_fork(&mut self, block: &Box<dyn RawBlock>) {
+        block.get_transactions().par_iter().for_each(|tx| {
+            tx.outputs.iter().enumerate().for_each(|(index, output)| {
+                let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
+                self.status_map
+                    .entry(output_id)
+                    .and_modify(|output_spent_status: &mut SlipSpentStatus| {
+                        output_spent_status
+                            .fork_statuses
+                            .insert(block.get_hash(), ForkSpentStatus::ForkUnspent);
+                    })
+                    .or_insert(SlipSpentStatus::new_on_fork(
+                        output.clone(),
+                        block.get_hash(),
+                    ));
+            });
+            // loop through inputs and mark them as ForkSpent
+            tx.inputs.iter().for_each(|input| {
+                self.status_map.entry(input.clone()).and_modify(
+                    |output_spent_status: &mut SlipSpentStatus| {
+                        output_spent_status
+                            .fork_statuses
+                            .insert(block.get_hash(), ForkSpentStatus::ForkSpent);
+                    },
+                );
+            });
+        });
+    }
+    /// Remove a block from the tip of the longest chain.
+    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
+    /// Inputs should be marked back to Unspent, Outputs should have all status set to None. We
+    /// do not delete Outputs from the hashmap because they will soon be "unspent" again when
+    /// the transaction is rolled forward in another block.
+    fn roll_back(&mut self, block: &Box<dyn RawBlock>) {
+        // unspend outputs and spend the inputs
+        block.get_transactions().par_iter().for_each(|tx| {
+            tx.outputs
+                .par_iter()
+                .enumerate()
+                .for_each(|(index, _output)| {
+                    let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
+                    let entry =
+                        self.status_map
+                            .entry(output_id)
+                            .and_modify(|output_spent_status| {
+                                output_spent_status.longest_chain_unspent_block_id = None;
+                            });
+                    if let Entry::Vacant(_o) = entry {
+                        panic!("Output status not found in hashmap!");
+                    }
+                });
+            tx.inputs
+                .par_iter()
+                .enumerate()
+                .for_each(|(_index, input)| {
+                    let entry =
+                        self.status_map
+                            .entry(input.clone())
+                            .and_modify(|output_spent_status| {
+                                output_spent_status.longest_chain_spent_block_id = None;
+                            });
+                    if let Entry::Vacant(_o) = entry {
+                        panic!("Input status not found in hashmap!");
+                    }
+                });
+        });
+    }
+    /// Add a block to the tip of the longest chain.
+    /// Loop through the inputs and outputs in a transaction update the hashmap appropriately.
+    /// Outputs should be added or marked Unspent, Inputs should be marked Spent. This method
+    /// Can be called during a normal new block or during a reorg, so Unspent Outputs may already
+    /// be present if we're doing a reorg.
+    //pub fn roll_forward(&mut self, block: &dyn RawBlock) {
+    fn roll_forward(&mut self, block: &Box<dyn RawBlock>) {
+        block.get_transactions().par_iter().for_each(|tx| {
+            tx.outputs
+                .par_iter()
+                .enumerate()
+                .for_each(|(index, output)| {
+                    let output_id = OutputIdProto::new(tx.get_hash(), index as u32);
+                    self.status_map
+                        .entry(output_id)
+                        .and_modify(|output_spent_status| {
+                            output_spent_status.longest_chain_spent_block_id = Some(block.get_id());
+                        })
+                        .or_insert(SlipSpentStatus::new_on_longest_chain(
+                            output.clone(),
+                            block.get_id(),
+                        ));
+                });
+            tx.inputs.par_iter().for_each(|input| {
+                self.status_map.entry(input.clone()).and_modify(
+                    |output_spent_status: &mut SlipSpentStatus| {
+                        output_spent_status.longest_chain_spent_block_id = Some(block.get_id());
+                    },
+                );
+            });
+        });
+    }
+
+    
     /// Returns true if the output is Unspent(present in the hashmap and marked Unspent before the
     /// block). The ForkTuple allows us to check for Unspent/Spent status along the fork's
     /// potential new chain more quickly. This can be further optimized in the future.
-    pub async fn is_output_spendable_at_block_id(
+    async fn is_output_spendable_at_block_id(
         &self,
         output_id: &OutputIdProto,
         block_id: u32,
@@ -322,7 +358,7 @@ impl UtxoSet {
     /// Returns true if the output is Unspent(present in the hashmap and marked Unspent before the
     /// root block of a fork). The ForkTuple allows us to check for Unspent/Spent status along the fork's
     /// potential new chain more quickly. This can be further optimized in the future.
-    pub async fn is_output_spendable_in_fork_branch(
+    async fn is_output_spendable_in_fork_branch(
         &self,
         output_id: &OutputIdProto,
         fork_chains: &ForkChains,
@@ -385,7 +421,7 @@ impl UtxoSet {
     /// that a transaction is balanced.
     ///
     /// If one of the outputs is not valid, the function returns 0
-    pub fn get_total_for_inputs(&self, output_ids: Vec<OutputIdProto>) -> Option<u64> {
+    fn get_total_for_inputs(&self, output_ids: Vec<OutputIdProto>) -> Option<u64> {
         if output_ids.is_empty() {
             None
         } else {
@@ -405,7 +441,7 @@ impl UtxoSet {
     /// a single address, and, if so, returns that address, otherwise returns None. This is used
     /// to validate that the signer of a transaction is the receiver of all the outputs which
     /// he/she is trying to spend as inputs in a transaction.
-    pub fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>> {
+    fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>> {
         if output_ids.is_empty() {
             None
         } else {
@@ -428,7 +464,7 @@ impl UtxoSet {
         }
     }
     /// This is used to get the Output(`OutputProto`) which corresponds to a given Input(`OutputIdProto`)
-    pub fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto> {
+    fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto> {
         // TODO get rid of the clone here...?
         match self.status_map.get(output_id) {
             Some(output_status) => Some(output_status.output_status.clone()),
@@ -444,7 +480,7 @@ impl UtxoSet {
     // }
 
     /// Computes the fee(leftover of output amount - input amount) for a given unspent transaction.
-    pub fn transaction_fees(&self, tx: &TransactionProto) -> u64 {
+    fn transaction_fees(&self, tx: &TransactionProto) -> u64 {
         let input_amt: u64 = tx
             .inputs
             .iter()

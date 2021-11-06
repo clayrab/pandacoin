@@ -7,13 +7,14 @@ use tokio::sync::RwLock;
 use crate::block::RawBlock;
 use crate::forktree::ForkTree;
 use crate::longest_chain_queue::LongestChainQueue;
+use crate::test_utilities::mock_block::MockRawBlockForUTXOSet;
 use crate::types::Sha256Hash;
 
 /// Initial Treasury
 pub const TREASURY: u64 = 286_810_000_000_000_000;
 
 // A lazy-loaded global static reference to Blockchain. For now, we will simply treat
-// everything(utxoset, mempoolimpl BlockchainTrait, etc) as a single shared resource which is managed by blockchain.
+// everything(utxoset, mempoolimpl AbstractBlockchain, etc) as a single shared resource which is managed by blockchain.
 // In the future we may want to create separate globals for some of the resources being held
 // by blockchain by giving them a similar lazy_static Arc<Mutex> treatment, but we will wait
 // to see the performance of this simple state management scheme before we try to optimize.
@@ -22,7 +23,7 @@ pub const TREASURY: u64 = 286_810_000_000_000_000;
 //     pub static ref BLOCKCHAIN_GLOBAL: Arc<RwLock<Blockchain>> = Arc::new(RwLock::new(Blockchain::new()));
 // }
 
-pub static BLOCKCHAIN_GLOBAL: OnceCell<Arc<RwLock<Box<dyn BlockchainTrait + Send + Sync>>>> =
+pub static BLOCKCHAIN_GLOBAL: OnceCell<Arc<RwLock<Box<dyn AbstractBlockchain + Send + Sync>>>> =
     OnceCell::new();
 
 /// Enumerated types of `Transaction`s to be handed by consensus
@@ -38,7 +39,7 @@ pub enum AddBlockEvent {
 }
 
 #[async_trait]
-pub trait BlockchainTrait: Debug {
+pub trait AbstractBlockchain: Debug {
     fn latest_block(&self) -> Option<&Box<dyn RawBlock>>;
 
     /// If the block is in the fork
@@ -69,7 +70,7 @@ pub struct Blockchain {
 }
 
 #[async_trait]
-impl BlockchainTrait for Blockchain {
+impl AbstractBlockchain for Blockchain {
     fn latest_block(&self) -> Option<&Box<dyn RawBlock>> {
         //self.fork_tree.block_by_hash(&self.longest_chain_queue.latest_block_hash())
         match self.longest_chain_queue.latest_block_hash() {
@@ -132,7 +133,8 @@ impl BlockchainTrait for Blockchain {
                             let block: &Box<dyn RawBlock> =
                                 self.fork_tree.block_by_hash(block_hash).unwrap();
                             self.longest_chain_queue.roll_back();
-                            // UTXOSET_GLOBAL.clone().write().unwrap().roll_back(block);
+                            //UTXOSET_GLOBAL.get
+                            //UTXOSET_GLOBAL.clone().write().unwrap().roll_back(block);
                             // OUTPUT_DB_GLOBAL
                             //     .clone()
                             //     .write()
