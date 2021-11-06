@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::block::RawBlock;
-use crate::blockchain::{AddBlockEvent, BlockchainTrait};
+use crate::blockchain::{AddBlockEvent, AbstractBlockchain};
 use crate::types::Sha256Hash;
 
 #[derive(Debug)]
@@ -19,7 +19,7 @@ impl MockBlockchain {
 }
 
 #[async_trait]
-impl BlockchainTrait for MockBlockchain {
+impl AbstractBlockchain for MockBlockchain {
     fn latest_block(&self) -> Option<&Box<dyn RawBlock>> {
         None
     }

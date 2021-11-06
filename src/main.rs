@@ -12,6 +12,7 @@ use tracing_subscriber;
 
 use pandacoin::blockchain::{AddBlockEvent, Blockchain, BLOCKCHAIN_GLOBAL};
 use pandacoin::command_line_opts::{CommandLineOpts, COMMAND_LINE_OPTS_GLOBAL};
+use pandacoin::utxoset::UTXOSET_GLOBAL;
 
 #[tokio::main]
 pub async fn main() -> pandacoin::Result<()> {
@@ -27,6 +28,11 @@ pub async fn main() -> pandacoin::Result<()> {
         .set(Arc::new(RwLock::new(Box::new(Blockchain::new()))))
         .unwrap();
 
+        
+
+    // UTXOSET_GLOBAL
+    //     .set(Arc::new(RwLock::new(Box::new(Blockchain::new()))))
+    //     .unwrap();
     println!("WELCOME TO PANDA COIN!");
     if env::var("RUST_LOG").is_err() {
         println!("Setting Log Level to INFO. Use RUST_LOG=[level] to set. Accepts trace, info, debug, warn, error.");
