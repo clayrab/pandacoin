@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["COMMAND_LINE_OPTS_GLOBAL","A global reference to the KeypairStore"],["CommandLineOpts","This is the Clap options structure which stores all command line flags passed by the user to the application"]]});
+initSidebarItems({"static":[["COMMAND_LINE_OPTS_GLOBAL",""]],"struct":[["CommandLineOpts","This is the Clap options structure which stores all command line flags passed by the user to the application"]]});

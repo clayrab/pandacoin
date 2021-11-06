@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ForkTree","This class is used to store all blocks in a tree structure. We simply use the RawBlock’s previous_block_hash  as a pointer to the parent node."]]});
+initSidebarItems({"struct":[["ForkTree","This class is used to store all blocks in a tree structure. We simply use the RawBlock’s previous_block_hash as a pointer to the parent node."]]});

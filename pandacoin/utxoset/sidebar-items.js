@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["UTXOSET_GLOBAL",""],["UtxoSet","A hashmap storing everything needed to validate the spendability of a output. This may be optimized in the future, but should be performant enough for the time being."]]});

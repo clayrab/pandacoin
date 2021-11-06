@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["pandacoin"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.55.0/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"struct\" href=\"pandacoin/keypair/struct.Keypair.html\" title=\"struct pandacoin::keypair::Keypair\">Keypair</a>","synthetic":false,"types":["pandacoin::keypair::Keypair"]}];
+implementors["pandacoin"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.56.1/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"struct\" href=\"pandacoin/keypair/struct.Keypair.html\" title=\"struct pandacoin::keypair::Keypair\">Keypair</a>","synthetic":false,"types":["pandacoin::keypair::Keypair"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
