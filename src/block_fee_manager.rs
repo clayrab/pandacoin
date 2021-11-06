@@ -50,7 +50,7 @@ impl BlockFeeManager {
             next_fee = STARTING_BLOCK_FEE;
         } else if self.timestamps.len() > NUMBER_OF_BLOCKS_FOR_TARGET_CALC as usize {
             let avg_fee = self.total_fees / NUMBER_OF_BLOCKS_FOR_TARGET_CALC;
-            // we add BLOCK_TIME_TARGET_MS to the timediff to deal with the fencepost problem, basically pretending that the first block took BLOCK_TIME_TARGET_MS to produce
+            // we add BLOCK_TIME_TARGET_MS to the timediff to deal with the fencepost problem, basically pretending that the first block took BLOCK_TIME_TARGET_MS to produce.
             // We do not subtract 1 from the timestamps index because we also want to add one to account for the fence post problem seemlessly from the else case below.
             // i.e. for N blocks, last - first included the time_diff across N-1 blocks, however, self.timestamps.len() is also 1 too large, so these cancel eachother out
             // and we are just left with just "self.timestamps.len() - N" (i.e. the index of the N-1th blocks prior to the last)

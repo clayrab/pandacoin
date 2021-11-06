@@ -3,23 +3,28 @@ use log::{debug, error, info, warn};
 use pandacoin::keypair_store::{KeypairStore, KEYPAIRSTORE_GLOBAL};
 use pandacoin::panda_protos::RawBlockProto;
 use pandacoin::timestamp_generator::{SystemTimestampGenerator, TIMESTAMP_GENERATOR_GLOBAL};
+use tokio::sync::RwLock;
 use std::env;
+use std::sync::Arc;
 use tokio::signal;
 use tracing::{event, Level};
 use tracing_subscriber;
 
-use pandacoin::blockchain::{AddBlockEvent, BLOCKCHAIN_GLOBAL};
+use pandacoin::blockchain::{AddBlockEvent, BLOCKCHAIN_GLOBAL, Blockchain};
 use pandacoin::command_line_opts::{CommandLineOpts, COMMAND_LINE_OPTS_GLOBAL};
 
 #[tokio::main]
 pub async fn main() -> pandacoin::Result<()> {
-    KEYPAIRSTORE_GLOBAL.set(KeypairStore::new()).unwrap();
     COMMAND_LINE_OPTS_GLOBAL
         .set(CommandLineOpts::parse())
         .unwrap();
     TIMESTAMP_GENERATOR_GLOBAL
         .set(Box::new(SystemTimestampGenerator::new()))
         .unwrap();
+    KEYPAIRSTORE_GLOBAL.set(KeypairStore::new()).unwrap();
+
+    BLOCKCHAIN_GLOBAL.set(Arc::new(RwLock::new(Box::new(Blockchain::new())))).unwrap();
+
     println!("WELCOME TO PANDA COIN!");
     if env::var("RUST_LOG").is_err() {
         println!("Setting Log Level to INFO. Use RUST_LOG=[level] to set. Accepts trace, info, debug, warn, error.");
@@ -51,10 +56,10 @@ pub async fn main() -> pandacoin::Result<()> {
         println!("***********************************************");
         println!("*********** CREATING GENESIS BLOCK ************");
         println!("***********************************************");
-        let blockchain_arc = BLOCKCHAIN_GLOBAL.clone();
+        let blockchain_arc = BLOCKCHAIN_GLOBAL.get().unwrap().clone();
         let mut blockchain = blockchain_arc.write().await;
         let genesis_block = RawBlockProto::create_genesis_block();
-        let result = blockchain.add_block(genesis_block).await;
+        let result = blockchain.add_block(Box::new(genesis_block)).await;
         assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
     }
     tokio::select! {

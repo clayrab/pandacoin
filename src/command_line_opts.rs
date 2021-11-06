@@ -17,6 +17,7 @@ pub struct CommandLineOpts {
 
     #[clap(short, long)]
     pub nocapture: bool,
+    
 }
 #[cfg(test)]
 mod test {
