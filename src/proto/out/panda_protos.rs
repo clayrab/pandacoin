@@ -1,11 +1,11 @@
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, Eq, PartialEq, ::prost::Message)]
 pub struct OutputIdProto {
     #[prost(bytes = "vec", tag = "1")]
     pub tx_id: ::prost::alloc::vec::Vec<u8>,
     #[prost(uint32, tag = "2")]
-    pub slip_ordinal: u32,
+    pub output_ordinal: u32,
 }
-#[derive(Clone, PartialEq, ::prost::Message)]
+#[derive(Clone, Eq, PartialEq, ::prost::Message)]
 pub struct OutputProto {
     #[prost(bytes = "vec", tag = "1")]
     pub receiver: ::prost::alloc::vec::Vec<u8>,
@@ -14,15 +14,17 @@ pub struct OutputProto {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionProto {
-    #[prost(uint64, tag = "1")]
+    #[prost(bytes = "vec", optional, tag = "1")]
+    pub hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    #[prost(uint64, tag = "2")]
     pub timestamp: u64,
-    #[prost(message, repeated, tag = "2")]
-    pub inputs: ::prost::alloc::vec::Vec<OutputIdProto>,
     #[prost(message, repeated, tag = "3")]
+    pub inputs: ::prost::alloc::vec::Vec<OutputIdProto>,
+    #[prost(message, repeated, tag = "4")]
     pub outputs: ::prost::alloc::vec::Vec<OutputProto>,
-    #[prost(enumeration = "transaction_proto::TxType", tag = "4")]
+    #[prost(enumeration = "transaction_proto::TxType", tag = "5")]
     pub txtype: i32,
-    #[prost(bytes = "vec", tag = "5")]
+    #[prost(bytes = "vec", tag = "6")]
     pub message: ::prost::alloc::vec::Vec<u8>,
 }
 /// Nested message and enum types in `TransactionProto`.
