@@ -1,12 +1,13 @@
 use crate::constants::STARTING_BLOCK_FEE;
 use crate::crypto::hash_bytes;
 use crate::keypair_store::KEYPAIRSTORE_GLOBAL;
-use crate::panda_protos::RawBlockProto;
+use crate::panda_protos::{RawBlockProto, TransactionProto};
 use crate::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL;
 use crate::types::Sha256Hash;
 use prost::Message;
 use secp256k1::{PublicKey, Signature};
 use std::convert::TryInto;
+use std::fmt::Debug;
 use std::io::Cursor;
 use std::str::FromStr;
 /// This structure is a basic block, it should be 1-to-1 with the physical data which will be serialized
@@ -14,7 +15,7 @@ use std::str::FromStr;
 /// We provide a useless default implementation for the sake of making different mock RawBlocks easier.
 /// We would prefer to define only the interface here and the default implementation in mock_block.rs, but
 /// Rust does not allow this.
-pub trait RawBlock {
+pub trait RawBlock: Sync + Debug + Send {
     fn get_signature(&self) -> Signature {
         Signature::from_compact(&[0; 64]).unwrap()
     }
@@ -37,6 +38,7 @@ pub trait RawBlock {
     fn get_id(&self) -> u32 {
         0
     }
+    fn get_transactions(&self) -> &Vec<TransactionProto>;
 }
 
 impl RawBlockProto {
@@ -64,8 +66,13 @@ impl RawBlockProto {
             merkle_root: vec![],
             transactions: vec![],
         };
-        block.hash = Some(hash_bytes(&block.serialize()).to_vec());
+        block.hash = block.generate_hash();
         block
+    }
+
+    pub fn generate_hash(&self) -> Option<Vec<u8>> {
+        assert!(self.hash.is_none());
+        Some(hash_bytes(&self.serialize()).to_vec())
     }
     pub fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
@@ -121,9 +128,9 @@ impl RawBlock for RawBlockProto {
         PublicKey::from_slice(&self.creator[..]).unwrap()
     }
 
-    // pub fn transactions(&self) -> &Vec<Transaction> {
-    //     &self.core.transactions
-    // }
+    fn get_transactions(&self) -> &Vec<TransactionProto> {
+        &self.transactions
+    }
 
     fn get_previous_block_hash(&self) -> Sha256Hash {
         // TODO Memoize this and return as a shared borrow?
