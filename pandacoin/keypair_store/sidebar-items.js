@@ -1,1 +1,1 @@
-initSidebarItems({"static":[["KEYPAIRSTORE_GLOBAL",""]],"struct":[["KeypairStore","This manages a keypair for the user through a CLI. It will encrypt, decrypt, and store a single keypair which the node will use for signing and as the keypair for a wallet to receive rewards and to receive mini-blocks."]]});
+initSidebarItems({"struct":[["KeypairStore","This manages a keypair for the user through a CLI. It will encrypt, decrypt, and store a single keypair which the node will use for signing and as the keypair for a wallet to receive rewards and to receive mini-blocks."]]});

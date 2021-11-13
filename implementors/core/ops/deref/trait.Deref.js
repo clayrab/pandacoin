@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["pandacoin"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.56.1/core/ops/deref/trait.Deref.html\" title=\"trait core::ops::deref::Deref\">Deref</a> for <a class=\"struct\" href=\"pandacoin/utxoset/struct.UTXOSET_GLOBAL.html\" title=\"struct pandacoin::utxoset::UTXOSET_GLOBAL\">UTXOSET_GLOBAL</a>","synthetic":false,"types":["pandacoin::utxoset::UTXOSET_GLOBAL"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

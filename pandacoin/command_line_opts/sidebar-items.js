@@ -1,1 +1,1 @@
-initSidebarItems({"static":[["COMMAND_LINE_OPTS_GLOBAL",""]],"struct":[["CommandLineOpts","This is the Clap options structure which stores all command line flags passed by the user to the application"]]});
+initSidebarItems({"struct":[["CommandLineOpts","This is the Clap options structure which stores all command line flags passed by the user to the application"]]});

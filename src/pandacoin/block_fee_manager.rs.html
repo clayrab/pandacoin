@@ -179,6 +179,7 @@
 <span id="179">179</span>
 <span id="180">180</span>
 <span id="181">181</span>
+<span id="182">182</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block::RawBlock</span>,
     <span class="ident">constants</span>::{<span class="ident">BLOCK_TIME_TARGET_MS</span>, <span class="ident">NUMBER_OF_BLOCKS_FOR_TARGET_CALC</span>, <span class="ident">STARTING_BLOCK_FEE</span>},
@@ -256,10 +257,11 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::init_globals_for_tests</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL</span>;
+    
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::globals_init::make_timestamp_generator_for_test</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::mock_block::MockRawBlockForBlockFee</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">constants::BLOCK_TIME_TARGET_MS</span>, <span class="ident">test_utilities::mock_block::MockRawBlockForBlockFee</span>,
+        <span class="ident">constants::BLOCK_TIME_TARGET_MS</span>,
     };
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -274,9 +276,9 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">block_fee_big_fees_test</span>() {
-        <span class="ident">init_globals_for_tests</span>();
+        <span class="kw">let</span> <span class="ident">timestamp_generator</span> <span class="op">=</span> <span class="ident">make_timestamp_generator_for_test</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">block_fee_manager</span> <span class="op">=</span> <span class="ident">BlockFeeManager::new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">block_timestamp</span> <span class="op">=</span> <span class="ident">TIMESTAMP_GENERATOR_GLOBAL</span>.<span class="ident">get</span>().<span class="ident">unwrap</span>().<span class="ident">get_timestamp</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">block_timestamp</span> <span class="op">=</span> <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>();
 
         <span class="comment">// 0 Add a block at the expected time with the expected fee.</span>
         <span class="ident">block_fee_manager</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">MockRawBlockForBlockFee::new</span>(<span class="number">1</span>, <span class="ident">block_timestamp</span>));

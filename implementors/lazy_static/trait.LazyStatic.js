@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["pandacoin"] = [{"text":"impl <a class=\"trait\" href=\"https://docs.rs/lazy_static/1.4.0/lazy_static/trait.LazyStatic.html\" title=\"trait lazy_static::LazyStatic\">LazyStatic</a> for <a class=\"struct\" href=\"pandacoin/utxoset/struct.UTXOSET_GLOBAL.html\" title=\"struct pandacoin::utxoset::UTXOSET_GLOBAL\">UTXOSET_GLOBAL</a>","synthetic":false,"types":["pandacoin::utxoset::UTXOSET_GLOBAL"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

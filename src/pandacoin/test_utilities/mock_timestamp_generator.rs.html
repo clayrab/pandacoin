@@ -35,7 +35,7 @@
 <span id="35">35</span>
 <span id="36">36</span>
 <span id="37">37</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::timestamp_generator::TimestampGenerator</span>;
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::timestamp_generator::AbstractTimestampGenerator</span>;
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">sync::RwLock</span>,
@@ -62,7 +62,7 @@
         <span class="ident">MockTimestampGenerator</span> {}
     }
 }
-<span class="kw">impl</span> <span class="ident">TimestampGenerator</span> <span class="kw">for</span> <span class="ident">MockTimestampGenerator</span> {
+<span class="kw">impl</span> <span class="ident">AbstractTimestampGenerator</span> <span class="kw">for</span> <span class="ident">MockTimestampGenerator</span> {
     <span class="kw">fn</span> <span class="ident">get_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">timestamp</span> <span class="op">=</span> <span class="ident">MOCK_TIMESTAMP</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
         <span class="kw-2">*</span><span class="ident">timestamp</span>

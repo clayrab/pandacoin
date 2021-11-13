@@ -50,7 +50,6 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos::transaction_proto::TxType</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos::TransactionProto</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos</span>::{<span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::types::Sha256Hash</span>;
 <span class="kw">use</span> <span class="ident">prost::Message</span>;
 <span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
@@ -61,9 +60,9 @@
         <span class="ident">inputs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>,
         <span class="ident">outputs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputProto</span><span class="op">&gt;</span>,
         <span class="ident">txtype</span>: <span class="ident">TxType</span>,
+        <span class="ident">timestamp</span>: <span class="ident">u64</span>,
         <span class="ident">message</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">timestamp</span> <span class="op">=</span> <span class="ident">TIMESTAMP_GENERATOR_GLOBAL</span>.<span class="ident">get</span>().<span class="ident">unwrap</span>().<span class="ident">get_timestamp</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">TransactionProto</span> {
             <span class="ident">hash</span>: <span class="prelude-val">None</span>,
             <span class="ident">timestamp</span>: <span class="ident">timestamp</span>,
@@ -71,6 +70,7 @@
             <span class="ident">outputs</span>: <span class="ident">outputs</span>,
             <span class="ident">txtype</span>: <span class="ident">txtype</span> <span class="kw">as</span> <span class="ident">i32</span>,
             <span class="ident">message</span>: <span class="ident">message</span>,
+            <span class="ident">signature</span>: <span class="macro">vec!</span>[],
         };
         <span class="ident">tx</span>.<span class="ident">hash</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">generate_hash</span>();
         <span class="ident">tx</span>
