@@ -40,13 +40,23 @@ pub fn verify_string_message(message: &str, sig: &str, public_key: &str) -> bool
 }
 
 /// Verify a message signed by secp256k1. Message is a byte array. Sig and pubkey should be base58 encoded.
-pub fn verify_bytes_message(message: &[u8], sig: &Signature, address: &Vec<u8>) -> bool {
+pub fn verify_bytes_message(message: &[u8], sig_vec: Vec<u8>, address: &Vec<u8>) -> bool {
+    let sig = Signature::from_compact(&sig_vec[..]).unwrap();
     let public_key = PublicKey::from_slice(&address.clone()).unwrap();
 
     let message = Message::from_slice(message).unwrap();
     // TODO actually hash, sign and verify things
     true || SECP256K1.verify(&message, &sig, &public_key).is_ok() || true
 }
+
+/// Verify a message signed by secp256k1. Message is a byte array. Sig and pubkey should be base58 encoded.
+// pub fn verify_bytes_message(message: &[u8], sig: &Signature, address: &Vec<u8>) -> bool {
+//     let public_key = PublicKey::from_slice(&address.clone()).unwrap();
+
+//     let message = Message::from_slice(message).unwrap();
+//     // TODO actually hash, sign and verify things
+//     true || SECP256K1.verify(&message, &sig, &public_key).is_ok() || true
+// }
 
 #[cfg(test)]
 mod test {

@@ -8,59 +8,74 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
 */
 extern crate rpassword;
 
-use crate::command_line_opts::COMMAND_LINE_OPTS_GLOBAL;
+use crate::command_line_opts::CommandLineOpts;
 use crate::crypto::hash_bytes;
 use crate::keypair::Keypair;
 use aes::Aes128;
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
-use once_cell::sync::OnceCell;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Read;
 use std::path::Path;
-
-pub static KEYPAIRSTORE_GLOBAL: OnceCell<KeypairStore> = OnceCell::new();
+use std::sync::Arc;
 
 // create an alias for convenience
 type Aes128Cbc = Cbc<Aes128, Pkcs7>;
 
+#[derive(Debug)]
+struct KeypairStoreContext {
+    command_line_opts: Arc<CommandLineOpts>,
+}
+
 /// This manages a keypair for the user through a CLI. It will encrypt, decrypt, and store a single keypair which the node
 /// will use for signing and as the keypair for a wallet to receive rewards and to receive mini-blocks.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct KeypairStore {
     /// The keypair
     keypair: Keypair,
+    context: KeypairStoreContext,
 }
 
 impl KeypairStore {
     /// Create new `KeypairStore`.
-    pub fn new() -> Self {
-        let path = Path::new(&COMMAND_LINE_OPTS_GLOBAL.get().unwrap().key_path);
+    pub fn new(command_line_opts: Arc<CommandLineOpts>) -> Self {
+        let path = Path::new(&command_line_opts.key_path);
         let decrypted_buffer: Vec<u8>;
         if !path.exists() {
             println!("Creating key file");
             decrypted_buffer = KeypairStore::create_key_file(
-                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().key_path,
-                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().password,
+                &command_line_opts.key_path,
+                &command_line_opts.password,
             );
         } else {
             println!("Reading key file");
             decrypted_buffer = KeypairStore::read_key_file(
-                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().key_path,
-                &COMMAND_LINE_OPTS_GLOBAL.get().unwrap().password,
+                &command_line_opts.key_path,
+                &command_line_opts.password,
             );
         }
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
-        KeypairStore { keypair: keypair }
+        
+        KeypairStore {
+            keypair: keypair,
+            context: KeypairStoreContext{
+                command_line_opts
+            }
+        }
     }
     /// Create new `KeypairStore` for testing from existing wallet in test data.
-    pub fn new_mock() -> Self {
+    pub fn new_mock(command_line_opts: Arc<CommandLineOpts>) -> Self {
         let decrypted_buffer: Vec<u8>;
         decrypted_buffer =
             KeypairStore::read_key_file(&"data/test/testwallet", &Some(String::from("asdf")));
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
-        KeypairStore { keypair: keypair }
+        KeypairStore {
+            keypair: keypair,
+            context: KeypairStoreContext{
+                command_line_opts
+            }
+        }
     }
     /// get the keypair
     pub fn get_keypair(&self) -> &Keypair {
@@ -120,22 +135,29 @@ impl KeypairStore {
 
 #[cfg(test)]
 mod test {
-    use crate::test_utilities::init_globals_for_tests;
+    
+    use clap::Clap;
+
+    use crate::test_utilities::globals_init::make_keypair_store_for_test;
 
     use super::*;
 
     #[tokio::test]
     async fn mock_keypair_store_test() {
-        init_globals_for_tests();
+        // let command_line_opts = Arc::new(CommandLineOpts::parse_from(&[
+        //     "pandacoin",
+        //     "--password",
+        //     "asdf",
+        // ]));
+        // let keypair_store = KeypairStore::new_mock(command_line_opts.clone());
+        let keypair_store = make_keypair_store_for_test();
         assert_eq!(
             "02fc238df3474c274887f85b3f36d3adffa5465f15840779da6fc82f912c4d1009",
             hex::encode(
-                KEYPAIRSTORE_GLOBAL
-                    .get()
-                    .unwrap()
-                    .get_keypair()
-                    .get_public_key()
-                    .serialize()
+                keypair_store
+                .get_keypair()
+                .get_public_key()
+                .serialize()
             )
         );
     }

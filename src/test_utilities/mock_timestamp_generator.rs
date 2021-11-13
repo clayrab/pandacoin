@@ -1,4 +1,4 @@
-use crate::timestamp_generator::TimestampGenerator;
+use crate::timestamp_generator::AbstractTimestampGenerator;
 use std::fmt::Debug;
 use std::{
     sync::RwLock,
@@ -25,7 +25,7 @@ impl MockTimestampGenerator {
         MockTimestampGenerator {}
     }
 }
-impl TimestampGenerator for MockTimestampGenerator {
+impl AbstractTimestampGenerator for MockTimestampGenerator {
     fn get_timestamp(&self) -> u64 {
         let timestamp = MOCK_TIMESTAMP.read().unwrap();
         *timestamp

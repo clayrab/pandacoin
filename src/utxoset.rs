@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use dashmap::mapref::entry::Entry;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
+use std::fmt::Debug;
 use crate::block::RawBlock;
 use crate::blockchain::ForkChains;
 use crate::panda_protos::{OutputIdProto, OutputProto, TransactionProto};
@@ -9,17 +10,6 @@ use crate::types::Sha256Hash;
 
 use dashmap::DashMap;
 use std::collections::HashMap;
-use std::sync::Arc;
-
-lazy_static! {
-
-    // We use Arc for thread-safe reference counting and Mutex for thread-safe mutabilitity
-    pub static ref UTXOSET_GLOBAL: Arc<std::sync::RwLock<UtxoSet>> = Arc::new(std::sync::RwLock::new(UtxoSet::new()));
-}
-
-//pub static UTXOSET_GLOBAL: OnceCell<Arc<RwLock<Box<dyn AbstractBlockchain + Send + Sync>>>> =Arc<std::sync::RwLock<UtxoSet>> = OnceCell::new();
-//pub static UTXOSET_GLOBAL: OnceCell<Arc<RwLock<Box<dyn AbstractBlockchain + Send + Sync>>>> =
-    
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LongestChainSpentTime {
@@ -101,7 +91,7 @@ impl SlipSpentStatus {
 }
 
 #[async_trait]
-pub trait AbstractUtxoSet {
+pub trait AbstractUtxoSet: Debug {
     fn roll_back_on_fork(&mut self, block: &Box<dyn RawBlock>);
     fn roll_forward_on_fork(&mut self, block: &Box<dyn RawBlock>) ;
     fn roll_back(&mut self, block: &Box<dyn RawBlock>) ;
@@ -130,7 +120,7 @@ pub trait AbstractUtxoSet {
 /// A hashmap storing everything needed to validate the spendability of a output.
 /// This may be optimized in the future, but should be performant enough for the
 /// time being.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UtxoSet {
     status_map: DashMap<OutputIdProto, SlipSpentStatus>,
 }
@@ -215,7 +205,7 @@ impl AbstractUtxoSet for UtxoSet {
                         self.status_map
                             .entry(output_id)
                             .and_modify(|output_spent_status| {
-                                output_spent_status.fork_statuses.remove(&block.get_hash());
+                                output_spent_status.fork_statuses.remove(&block.get_hash().clone());
                             });
                     if let Entry::Vacant(_o) = entry {
                         panic!("Output fork status not found in hashmap!");
@@ -229,7 +219,7 @@ impl AbstractUtxoSet for UtxoSet {
                         self.status_map
                             .entry(input.clone())
                             .and_modify(|output_spent_status| {
-                                output_spent_status.fork_statuses.remove(&block.get_hash());
+                                output_spent_status.fork_statuses.remove(&block.get_hash().clone());
                             });
                     if let Entry::Vacant(_o) = entry {
                         panic!("Input fork status not found in hashmap!");
@@ -251,11 +241,11 @@ impl AbstractUtxoSet for UtxoSet {
                     .and_modify(|output_spent_status: &mut SlipSpentStatus| {
                         output_spent_status
                             .fork_statuses
-                            .insert(block.get_hash(), ForkSpentStatus::ForkUnspent);
+                            .insert(block.get_hash().clone(), ForkSpentStatus::ForkUnspent);
                     })
                     .or_insert(SlipSpentStatus::new_on_fork(
                         output.clone(),
-                        block.get_hash(),
+                        block.get_hash().clone(),
                     ));
             });
             // loop through inputs and mark them as ForkSpent
@@ -264,7 +254,7 @@ impl AbstractUtxoSet for UtxoSet {
                     |output_spent_status: &mut SlipSpentStatus| {
                         output_spent_status
                             .fork_statuses
-                            .insert(block.get_hash(), ForkSpentStatus::ForkSpent);
+                            .insert(block.get_hash().clone(), ForkSpentStatus::ForkSpent);
                     },
                 );
             });
@@ -497,21 +487,17 @@ impl AbstractUtxoSet for UtxoSet {
 mod test {
 
     use super::*;
-    use crate::{
-        keypair::Keypair,
-        panda_protos::transaction_proto::TxType,
-        test_utilities::{init_globals_for_tests, mock_block::MockRawBlockForUTXOSet},
-    };
+    use crate::{keypair::Keypair, panda_protos::transaction_proto::TxType, test_utilities::{globals_init::make_timestamp_generator_for_test, mock_block::MockRawBlockForUTXOSet}};
 
     #[tokio::test]
     async fn roll_forward_and_back_transaction_test() {
-        init_globals_for_tests();
+        let timestamp_generator = make_timestamp_generator_for_test();
         // object under test:
         let mut utxo_set = UtxoSet::new();
         // mock things:
         let keypair = Keypair::new();
         let output_a = OutputProto::new(keypair.get_public_key().clone(), 1);
-        let tx_a = TransactionProto::new(vec![], vec![output_a.clone()], TxType::Normal, vec![]);
+        let tx_a = TransactionProto::new(vec![], vec![output_a.clone()], TxType::Normal, timestamp_generator.get_timestamp(), vec![]);
         let output_a_input = OutputIdProto::new(tx_a.get_hash(), 0);
         let mock_block_a: Box<dyn RawBlock> =
             Box::new(MockRawBlockForUTXOSet::new(0, [1; 32], vec![tx_a]));
@@ -543,7 +529,7 @@ mod test {
 
     #[tokio::test]
     async fn roll_forward_and_back_transaction_on_fork_test() {
-        init_globals_for_tests();
+        let timestamp_generator = make_timestamp_generator_for_test();
         // object under test:
         let mut utxo_set = UtxoSet::new();
         // mock things:
@@ -551,7 +537,7 @@ mod test {
 
         // block_a has a single output in it
         let output_a = OutputProto::new(keypair.get_public_key().clone(), 1);
-        let tx_a = TransactionProto::new(vec![], vec![output_a], TxType::Normal, vec![]);
+        let tx_a = TransactionProto::new(vec![], vec![output_a], TxType::Normal, timestamp_generator.get_timestamp(), vec![]);
         let output_a_input = OutputIdProto::new(tx_a.get_hash(), 0);
         let mock_block_a: Box<dyn RawBlock> =
             Box::new(MockRawBlockForUTXOSet::new(1, [1; 32], vec![tx_a]));
@@ -562,6 +548,7 @@ mod test {
             vec![output_a_input.clone()],
             vec![output_b],
             TxType::Normal,
+            timestamp_generator.get_timestamp(),
             vec![],
         );
         let output_b_input = OutputIdProto::new(tx_b.get_hash(), 0);
@@ -569,10 +556,10 @@ mod test {
             Box::new(MockRawBlockForUTXOSet::new(2, [2; 32], vec![tx_b]));
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash(),
+            ancestor_block_hash: mock_block_a.get_hash().clone(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![mock_block_a.get_hash(), mock_block_b.get_hash()],
+            new_chain: vec![mock_block_a.get_hash().clone(), mock_block_b.get_hash().clone()],
         };
         // ********* roll_forward tx a  *********
         utxo_set.roll_forward(&mock_block_a);
@@ -645,10 +632,10 @@ mod test {
         utxo_set.roll_forward_on_fork(&mock_block_a);
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash(),
+            ancestor_block_hash: mock_block_a.get_hash().clone(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![mock_block_a.get_hash(), mock_block_b.get_hash()],
+            new_chain: vec![mock_block_a.get_hash().clone(), mock_block_b.get_hash().clone()],
         };
         // it should be spendable at block b as a new fork but not spendable at block id 1
         // on the longest chain
@@ -678,10 +665,10 @@ mod test {
         utxo_set.roll_forward_on_fork(&mock_block_b);
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash(),
+            ancestor_block_hash: mock_block_a.get_hash().clone(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![mock_block_a.get_hash(), mock_block_b.get_hash(), [3; 32]],
+            new_chain: vec![mock_block_a.get_hash().clone(), mock_block_b.get_hash().clone(), [3; 32]],
         };
         assert_eq!(
             utxo_set.longest_chain_spent_status(&output_b_input, mock_block_a.get_id() - 1),
@@ -712,10 +699,10 @@ mod test {
         utxo_set.roll_back_on_fork(&mock_block_b);
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash(),
+            ancestor_block_hash: mock_block_a.get_hash().clone(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![mock_block_a.get_hash(), mock_block_b.get_hash()],
+            new_chain: vec![mock_block_a.get_hash().clone(), mock_block_b.get_hash().clone()],
         };
         assert!(
             !utxo_set
@@ -741,7 +728,7 @@ mod test {
 
     #[tokio::test]
     async fn get_total_for_inputs_test() {
-        init_globals_for_tests();
+        let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let mut utxo_set = UtxoSet::new();
 
@@ -754,7 +741,7 @@ mod test {
             OutputProto::new(keypair.get_public_key().clone(), 3),
         ];
         outputs.iter().for_each(|output| {
-            let tx_a = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, vec![]);
+            let tx_a = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, timestamp_generator.get_timestamp(), vec![]);
             inputs.push(OutputIdProto::new(tx_a.get_hash(), 0));
             txs.push(tx_a);
         });
@@ -769,7 +756,7 @@ mod test {
 
     #[tokio::test]
     async fn get_receiver_for_inputs_test() {
-        init_globals_for_tests();
+        let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let mut utxo_set = UtxoSet::new();
 
@@ -782,7 +769,7 @@ mod test {
             OutputProto::new(keypair.get_public_key().clone(), 3),
         ];
         outputs.iter().for_each(|output| {
-            let tx = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, vec![]);
+            let tx = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, timestamp_generator.get_timestamp(), vec![]);
             inputs.push(OutputIdProto::new(tx.get_hash(), 0));
             txs.push(tx);
         });
@@ -800,7 +787,7 @@ mod test {
 
     #[tokio::test]
     async fn get_receiver_for_inputs_test_mixed_receivers() {
-        init_globals_for_tests();
+        let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let keypair2 = Keypair::new();
         let mut utxo_set = UtxoSet::new();
@@ -815,7 +802,7 @@ mod test {
             OutputProto::new(keypair2.get_public_key().clone(), 4),
         ];
         outputs.iter().for_each(|output| {
-            let tx = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, vec![]);
+            let tx = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, timestamp_generator.get_timestamp(), vec![]);
             inputs.push(OutputIdProto::new(tx.get_hash(), 0));
             txs.push(tx);
         });
@@ -829,6 +816,7 @@ mod test {
     }
     #[tokio::test]
     async fn output_status_from_output_id_test() {
+        let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let keypair2 = Keypair::new();
         let mut utxo_set = UtxoSet::new();
@@ -843,7 +831,7 @@ mod test {
             OutputProto::new(keypair2.get_public_key().clone(), 4),
         ];
         outputs.iter().for_each(|output| {
-            let tx = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, vec![]);
+            let tx = TransactionProto::new(vec![], vec![output.clone()], TxType::Normal, timestamp_generator.get_timestamp(), vec![]);
             inputs.push(OutputIdProto::new(tx.get_hash(), 0));
             txs.push(tx);
         });
@@ -862,7 +850,7 @@ mod test {
 
     #[tokio::test]
     async fn transaction_fees_test() {
-        init_globals_for_tests();
+        let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let mut utxo_set = UtxoSet::new();
 
@@ -888,6 +876,7 @@ mod test {
                 vec![],
                 vec![outputs_for_input[i].clone()],
                 TxType::Normal,
+                timestamp_generator.get_timestamp(),
                 vec![],
             );
             let input_for_spent_output = OutputIdProto::new(spent_tx.get_hash(), 0);
@@ -895,6 +884,7 @@ mod test {
                 vec![input_for_spent_output],
                 vec![outputs[i].clone()],
                 TxType::Normal,
+                timestamp_generator.get_timestamp(),
                 vec![],
             );
             spent_txs.push(spent_tx);

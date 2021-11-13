@@ -75,10 +75,11 @@ impl BlockFeeManager {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test_utilities::init_globals_for_tests;
-    use crate::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL;
+    
+    use crate::test_utilities::globals_init::make_timestamp_generator_for_test;
+    use crate::test_utilities::mock_block::MockRawBlockForBlockFee;
     use crate::{
-        constants::BLOCK_TIME_TARGET_MS, test_utilities::mock_block::MockRawBlockForBlockFee,
+        constants::BLOCK_TIME_TARGET_MS,
     };
 
     #[tokio::test]
@@ -93,9 +94,9 @@ mod test {
 
     #[tokio::test]
     async fn block_fee_big_fees_test() {
-        init_globals_for_tests();
+        let timestamp_generator = make_timestamp_generator_for_test();
         let mut block_fee_manager = BlockFeeManager::new();
-        let mut block_timestamp = TIMESTAMP_GENERATOR_GLOBAL.get().unwrap().get_timestamp();
+        let mut block_timestamp = timestamp_generator.get_timestamp();
 
         // 0 Add a block at the expected time with the expected fee.
         block_fee_manager.roll_forward(&MockRawBlockForBlockFee::new(1, block_timestamp));
