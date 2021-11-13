@@ -22,16 +22,15 @@ message TransactionProto {
     }
     TxType txtype = 5;
     bytes message = 6;
+    bytes signature = 7;
 }
 
 message RawBlockProto {
-    optional bytes hash = 1;
-    optional uint64 block_fee = 2;
-    uint32 id = 3;
-    uint64 timestamp = 4;
-    bytes previous_block_hash = 5;
-    bytes creator = 6;
-    bytes signature = 7;
-    bytes merkle_root = 8;
-    repeated TransactionProto transactions = 9;
+    uint32 id = 1;
+    uint64 timestamp = 2;
+    bytes previous_block_hash = 3;
+    bytes creator = 4;
+    bytes signature = 5;
+    bytes merkle_root = 6;
+    repeated TransactionProto transactions = 7;
 }

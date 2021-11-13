@@ -2,7 +2,6 @@ use crate::crypto::hash_bytes;
 use crate::panda_protos::transaction_proto::TxType;
 use crate::panda_protos::TransactionProto;
 use crate::panda_protos::{OutputIdProto, OutputProto};
-use crate::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL;
 use crate::types::Sha256Hash;
 use prost::Message;
 use std::convert::TryInto;
@@ -13,9 +12,9 @@ impl TransactionProto {
         inputs: Vec<OutputIdProto>,
         outputs: Vec<OutputProto>,
         txtype: TxType,
+        timestamp: u64,
         message: Vec<u8>,
     ) -> Self {
-        let timestamp = TIMESTAMP_GENERATOR_GLOBAL.get().unwrap().get_timestamp();
         let mut tx = TransactionProto {
             hash: None,
             timestamp: timestamp,
@@ -23,6 +22,7 @@ impl TransactionProto {
             outputs: outputs,
             txtype: txtype as i32,
             message: message,
+            signature: vec![],
         };
         tx.hash = tx.generate_hash();
         tx

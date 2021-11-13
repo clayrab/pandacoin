@@ -26,6 +26,8 @@ pub struct TransactionProto {
     pub txtype: i32,
     #[prost(bytes = "vec", tag = "6")]
     pub message: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "7")]
+    pub signature: ::prost::alloc::vec::Vec<u8>,
 }
 /// Nested message and enum types in `TransactionProto`.
 pub mod transaction_proto {
@@ -38,10 +40,10 @@ pub mod transaction_proto {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RawBlockProto {
-    #[prost(bytes = "vec", optional, tag = "1")]
-    pub hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
-    #[prost(uint64, optional, tag = "2")]
-    pub block_fee: ::core::option::Option<u64>,
+    // #[prost(bytes = "vec", optional, tag = "1")]
+    // pub hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
+    // #[prost(uint64, optional, tag = "2")]
+    // pub block_fee: ::core::option::Option<u64>,
     #[prost(uint32, tag = "3")]
     pub id: u32,
     #[prost(uint64, tag = "4")]

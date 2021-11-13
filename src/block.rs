@@ -1,8 +1,6 @@
 use crate::constants::STARTING_BLOCK_FEE;
 use crate::crypto::hash_bytes;
-use crate::keypair_store::KEYPAIRSTORE_GLOBAL;
 use crate::panda_protos::{RawBlockProto, TransactionProto};
-use crate::timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL;
 use crate::types::Sha256Hash;
 use prost::Message;
 use secp256k1::{PublicKey, Signature};
@@ -15,12 +13,14 @@ use std::str::FromStr;
 /// We provide a useless default implementation for the sake of making different mock RawBlocks easier.
 /// We would prefer to define only the interface here and the default implementation in mock_block.rs, but
 /// Rust does not allow this.
+/// 
+
 pub trait RawBlock: Sync + Debug + Send {
     fn get_signature(&self) -> Signature {
         Signature::from_compact(&[0; 64]).unwrap()
     }
-    fn get_hash(&self) -> Sha256Hash {
-        [0; 32]
+    fn get_hash(&self) -> &Sha256Hash {
+        &[0; 32]
     }
     fn get_block_fee(&self) -> u64 {
         0
@@ -40,12 +40,18 @@ pub trait RawBlock: Sync + Debug + Send {
     }
     fn get_transactions(&self) -> &Vec<TransactionProto>;
 }
+#[derive(Debug)]
+pub struct PandaBlock {
+    hash: Sha256Hash,
+    fee: u64,
+    block_proto: RawBlockProto,
+}
 
-impl RawBlockProto {
-    /// Creates a new block using the global keypair and timestamp generator.
+impl PandaBlock {
     pub fn new(
         id: u32,
         creator: PublicKey,
+        timestamp: u64,
         previous_block_hash: Sha256Hash,
         // transactions: Vec<Transaction>,
     ) -> Self {
@@ -53,11 +59,8 @@ impl RawBlockProto {
         // TODO generate a real signature
         // TODO calculate the actual block fee
         let signature = Signature::from_compact(&[0; 64]).unwrap();
-        let timestamp = TIMESTAMP_GENERATOR_GLOBAL.get().unwrap().get_timestamp();
         let block_fee = 0;
-        let mut block = RawBlockProto {
-            hash: None,
-            block_fee: Some(block_fee),
+        let block_proto = RawBlockProto {
             id,
             timestamp,
             creator: creator.serialize().to_vec(),
@@ -66,13 +69,45 @@ impl RawBlockProto {
             merkle_root: vec![],
             transactions: vec![],
         };
-        block.hash = block.generate_hash();
+        let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
+        let block = PandaBlock {
+            hash: hash,
+            fee: block_fee,
+            block_proto: block_proto,
+        };
         block
     }
 
-    pub fn generate_hash(&self) -> Option<Vec<u8>> {
-        assert!(self.hash.is_none());
-        Some(hash_bytes(&self.serialize()).to_vec())
+    pub fn new_genesis_block(
+        creator: PublicKey,
+        timestamp: u64,
+    ) -> PandaBlock {
+        let signature = Signature::from_compact(&[0; 64]).unwrap();
+        let block_proto = RawBlockProto {
+            id: 0,
+            timestamp,
+            creator: creator
+                .serialize()
+                .to_vec(),
+            signature: signature.serialize_compact().to_vec(),
+            previous_block_hash: [0; 32].to_vec(),
+            merkle_root: vec![],
+            transactions: vec![],
+        };
+        let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
+        let block = PandaBlock {
+            hash: hash,
+            fee: STARTING_BLOCK_FEE,
+            block_proto: block_proto,
+        };
+        block
+    }
+}
+
+
+impl RawBlockProto {
+    pub fn generate_hash(&self) -> Vec<u8> {
+        hash_bytes(&self.serialize()).to_vec()
     }
     pub fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
@@ -84,93 +119,74 @@ impl RawBlockProto {
     pub fn deserialize(buf: &Vec<u8>) -> RawBlockProto {
         RawBlockProto::decode(&mut Cursor::new(buf)).unwrap()
     }
-    pub fn create_genesis_block() -> RawBlockProto {
-        let mut block = RawBlockProto::new(
-            0,
-            KEYPAIRSTORE_GLOBAL
-                .get()
-                .unwrap()
-                .get_keypair()
-                .get_public_key()
-                .clone(),
-            [0; 32],
-        );
-        block.block_fee = Some(STARTING_BLOCK_FEE);
-        block
-    }
 }
 
-impl RawBlock for RawBlockProto {
+impl RawBlock for PandaBlock {
     fn get_signature(&self) -> Signature {
         // TODO Memoize this?
-        Signature::from_compact(&self.signature[..]).unwrap()
+        Signature::from_compact(&self.block_proto.signature[..]).unwrap()
     }
 
-    fn get_hash(&self) -> Sha256Hash {
-        // TODO Memoize this? No, I think we will not. I'd rather not need to have a mutable block all the time
-        // simply use unwrap() here and let the errors come.
-        (*self.hash.as_ref().unwrap().clone()).try_into().unwrap()
+    fn get_hash(&self) -> &Sha256Hash {
+        &self.hash
+        //(*self.hash.as_ref()).try_into().unwrap()
     }
 
     fn get_block_fee(&self) -> u64 {
         // For now we just want to panic if block_fee is not set.
         // I don't think this needs to be properly memoized, but
         // let's just panic here so we can at least enforce consistency.
-        self.block_fee.unwrap()
+        self.fee
     }
 
     fn get_timestamp(&self) -> u64 {
-        self.timestamp
+        self.block_proto.timestamp
     }
 
     fn get_creator(&self) -> PublicKey {
         // TODO Memoize this?
-        PublicKey::from_slice(&self.creator[..]).unwrap()
+        PublicKey::from_slice(&self.block_proto.creator[..]).unwrap()
     }
 
     fn get_transactions(&self) -> &Vec<TransactionProto> {
-        &self.transactions
+        &self.block_proto.transactions
     }
 
     fn get_previous_block_hash(&self) -> Sha256Hash {
         // TODO Memoize this and return as a shared borrow?
-        self.previous_block_hash.clone().try_into().unwrap()
+        self.block_proto.previous_block_hash.clone().try_into().unwrap()
     }
 
     fn get_id(&self) -> u32 {
-        self.id
+        self.block_proto.id
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        block::RawBlock, keypair_store::KEYPAIRSTORE_GLOBAL, panda_protos::RawBlockProto,
-        test_utilities::init_globals_for_tests, timestamp_generator::TIMESTAMP_GENERATOR_GLOBAL,
-    };
+    use crate::{block::{PandaBlock, RawBlock}, test_utilities::globals_init::{make_keypair_store_for_test, make_timestamp_generator_for_test}};
 
     #[tokio::test]
     async fn new_block_fee_test() {
-        init_globals_for_tests();
-        let block1 = RawBlockProto::new(
+        let keypair_store = make_keypair_store_for_test();
+        let timestamp_generator = make_timestamp_generator_for_test();
+        let block1 = PandaBlock::new(
             0,
-            KEYPAIRSTORE_GLOBAL
-                .get()
-                .unwrap()
+            keypair_store
                 .get_keypair()
                 .get_public_key()
                 .clone(),
+                timestamp_generator.get_timestamp(),
             [0; 32],
         );
-        TIMESTAMP_GENERATOR_GLOBAL.get().unwrap().advance(111);
-        let block2 = RawBlockProto::new(
+        timestamp_generator.advance(111);
+        let block2 = PandaBlock::new(
             0,
-            KEYPAIRSTORE_GLOBAL
-                .get()
-                .unwrap()
+            keypair_store
                 .get_keypair()
                 .get_public_key()
                 .clone(),
+                timestamp_generator.get_timestamp(),
             [0; 32],
         );
         assert_eq!(block1.get_timestamp() + 111, block2.get_timestamp());
