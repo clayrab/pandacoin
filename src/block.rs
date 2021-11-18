@@ -13,7 +13,7 @@ use std::str::FromStr;
 /// We provide a useless default implementation for the sake of making different mock RawBlocks easier.
 /// We would prefer to define only the interface here and the default implementation in mock_block.rs, but
 /// Rust does not allow this.
-/// 
+///
 
 pub trait RawBlock: Sync + Debug + Send {
     fn get_signature(&self) -> Signature {
@@ -78,17 +78,12 @@ impl PandaBlock {
         block
     }
 
-    pub fn new_genesis_block(
-        creator: PublicKey,
-        timestamp: u64,
-    ) -> PandaBlock {
+    pub fn new_genesis_block(creator: PublicKey, timestamp: u64) -> PandaBlock {
         let signature = Signature::from_compact(&[0; 64]).unwrap();
         let block_proto = RawBlockProto {
             id: 0,
             timestamp,
-            creator: creator
-                .serialize()
-                .to_vec(),
+            creator: creator.serialize().to_vec(),
             signature: signature.serialize_compact().to_vec(),
             previous_block_hash: [0; 32].to_vec(),
             merkle_root: vec![],
@@ -103,7 +98,6 @@ impl PandaBlock {
         block
     }
 }
-
 
 impl RawBlockProto {
     pub fn generate_hash(&self) -> Vec<u8> {
@@ -154,7 +148,11 @@ impl RawBlock for PandaBlock {
 
     fn get_previous_block_hash(&self) -> Sha256Hash {
         // TODO Memoize this and return as a shared borrow?
-        self.block_proto.previous_block_hash.clone().try_into().unwrap()
+        self.block_proto
+            .previous_block_hash
+            .clone()
+            .try_into()
+            .unwrap()
     }
 
     fn get_id(&self) -> u32 {
@@ -164,7 +162,12 @@ impl RawBlock for PandaBlock {
 
 #[cfg(test)]
 mod test {
-    use crate::{block::{PandaBlock, RawBlock}, test_utilities::globals_init::{make_keypair_store_for_test, make_timestamp_generator_for_test}};
+    use crate::{
+        block::{PandaBlock, RawBlock},
+        test_utilities::globals_init::{
+            make_keypair_store_for_test, make_timestamp_generator_for_test,
+        },
+    };
 
     #[tokio::test]
     async fn new_block_fee_test() {
@@ -172,21 +175,15 @@ mod test {
         let timestamp_generator = make_timestamp_generator_for_test();
         let block1 = PandaBlock::new(
             0,
-            keypair_store
-                .get_keypair()
-                .get_public_key()
-                .clone(),
-                timestamp_generator.get_timestamp(),
+            keypair_store.get_keypair().get_public_key().clone(),
+            timestamp_generator.get_timestamp(),
             [0; 32],
         );
         timestamp_generator.advance(111);
         let block2 = PandaBlock::new(
             0,
-            keypair_store
-                .get_keypair()
-                .get_public_key()
-                .clone(),
-                timestamp_generator.get_timestamp(),
+            keypair_store.get_keypair().get_public_key().clone(),
+            timestamp_generator.get_timestamp(),
             [0; 32],
         );
         assert_eq!(block1.get_timestamp() + 111, block2.get_timestamp());

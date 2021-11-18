@@ -11,6 +11,7 @@ pub mod longest_chain_queue;
 pub mod output;
 #[path = "proto/out/panda_protos.rs"]
 pub mod panda_protos;
+pub mod tests_setup;
 pub mod timestamp_generator;
 pub mod transaction;
 pub mod types;
@@ -29,8 +30,8 @@ pub mod test_utilities;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate tracing;
+// #[macro_use]
+// extern crate tracing;
 
 /// Error returned by most functions.
 ///

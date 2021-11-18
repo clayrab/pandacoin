@@ -35,7 +35,8 @@ pub mod transaction_proto {
     #[repr(i32)]
     pub enum TxType {
         Normal = 0,
-        Service = 1,
+        Seed = 1,
+        Service = 2,
     }
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
