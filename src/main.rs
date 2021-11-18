@@ -20,9 +20,11 @@ pub async fn main() -> pandacoin::Result<()> {
     let timestamp_generator = Box::new(SystemTimestampGenerator::new());
     let command_line_opts = Arc::new(CommandLineOpts::parse());
     let keypair_store = KeypairStore::new(command_line_opts.clone());
-    let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> = Arc::new(RwLock::new(Box::new(UtxoSet::new())));
-    let blockchain_mutex_ref = Arc::new(RwLock::new(Box::new(Blockchain::new(utxoset_ref.clone()))));
-    
+    let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
+        Arc::new(RwLock::new(Box::new(UtxoSet::new())));
+    let blockchain_mutex_ref =
+        Arc::new(RwLock::new(Box::new(Blockchain::new(utxoset_ref.clone()))));
+
     println!("WELCOME TO PANDACOIN!");
     if env::var("RUST_LOG").is_err() {
         println!("Setting Log Level to INFO. Use RUST_LOG=[level] to set. Accepts trace, info, debug, warn, error.");
@@ -34,16 +36,10 @@ pub async fn main() -> pandacoin::Result<()> {
 
     debug!("this is a debug {}", "message");
     warn!("this is a warning");
-    info!(
-        "this is info {}",
-        timestamp_generator.get_timestamp()
-    );
+    info!("this is info {}", timestamp_generator.get_timestamp());
     error!("this is printed by default");
 
-    println!(
-        "Key: {}",
-        keypair_store.get_keypair().get_public_key()
-    );
+    println!("Key: {}", keypair_store.get_keypair().get_public_key());
     if command_line_opts.genesis {
         println!("***********************************************");
         println!("******************** GENESIS ******************");
@@ -51,11 +47,9 @@ pub async fn main() -> pandacoin::Result<()> {
         println!("*********** CREATING GENESIS BLOCK ************");
         println!("***********************************************");
         let mut blockchain = blockchain_mutex_ref.write().await;
-        let genesis_block = PandaBlock::new_genesis_block(keypair_store
-            .get_keypair()
-            .get_public_key()
-            .clone(),
-            timestamp_generator.get_timestamp()
+        let genesis_block = PandaBlock::new_genesis_block(
+            keypair_store.get_keypair().get_public_key().clone(),
+            timestamp_generator.get_timestamp(),
         );
         let result = blockchain.add_block(Box::new(genesis_block)).await;
         assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
@@ -75,8 +69,6 @@ pub async fn main() -> pandacoin::Result<()> {
 }
 
 async fn run() -> pandacoin::Result<()> {
-    loop {
-
-    }
-    Ok(())
+    loop {}
+    // Ok(())
 }

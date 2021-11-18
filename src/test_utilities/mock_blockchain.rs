@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 
 use crate::block::RawBlock;
-use crate::blockchain::{AddBlockEvent, AbstractBlockchain};
+use crate::blockchain::{AbstractBlockchain, AddBlockEvent};
 use crate::types::Sha256Hash;
 
 #[derive(Debug)]

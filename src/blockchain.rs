@@ -12,6 +12,8 @@ use crate::panda_protos::TransactionProto;
 use crate::types::Sha256Hash;
 use crate::utxoset::AbstractUtxoSet;
 
+use log::{error, info};
+
 /// Initial Treasury
 pub const TREASURY: u64 = 286_810_000_000_000_000;
 
@@ -154,13 +156,26 @@ impl AbstractBlockchain for Blockchain {
                             //     .roll_forward(&block.core());
                             // self.storage.roll_forward(block).await;
                         }
+                        // Wind the old chain as a fork chain
+                        for block_hash in fork_chains.old_chain.iter() {
+                            let block: &Box<dyn RawBlock> =
+                                self.fork_tree.block_by_hash(block_hash).unwrap();
+                            let mut utxoset = self.context.utxoset_ref.write().await;
+                            utxoset.roll_forward_on_fork(&block);
+                            // roll_forward_on_fork
+                            //     .clone()
+                            //     .write()
+                            //     .unwrap()
+                            //     .roll_back(&block.core());
+                            // self.storage.roll_back(&block);
+                        }
 
                         AddBlockEvent::AcceptedAsNewLongestChain
                     } else {
                         // we're just building on a new chain. Won't take over... yet!
                         let mut utxoset = self.context.utxoset_ref.write().await;
                         utxoset.roll_forward_on_fork(&block);
-                    
+
                         self.fork_tree
                             .insert(block.get_hash().clone(), block)
                             .unwrap();
@@ -181,9 +196,7 @@ impl Blockchain {
         Blockchain {
             longest_chain_queue: LongestChainQueue::new(),
             fork_tree: ForkTree::new(),
-            context: BlockchainContext {
-                utxoset_ref
-            }
+            context: BlockchainContext { utxoset_ref },
         }
     }
 
@@ -199,10 +212,9 @@ impl Blockchain {
         let mut target_block = block;
         let mut search_completed = false;
 
-        println!("find_fork_chains {:?}", target_block.get_hash());
-        println!("find_fork_chains {:?}", target_block.get_id());
         while !search_completed {
-            if target_block.get_id() == 1 || self
+            if target_block.get_id() == 1
+                || self
                     .longest_chain_queue
                     .contains_hash_by_block_id(&target_block.get_hash(), target_block.get_id())
             {
@@ -213,9 +225,7 @@ impl Blockchain {
                     .fork_tree
                     .block_by_hash(&target_block.get_previous_block_hash())
                 {
-                    Some(previous_block) => {
-                        target_block = previous_block
-                    },
+                    Some(previous_block) => target_block = previous_block,
                     None => {
                         search_completed = true;
                     }
@@ -252,6 +262,7 @@ impl Blockchain {
         } else {
             // If the previous block hash doesn't exist in the ForkTree, it's rejected
             if !self.fork_tree.contains_block_hash(&previous_block_hash) {
+                info!("invalid block, previous block not found");
                 return false;
             }
             if self
@@ -262,6 +273,7 @@ impl Blockchain {
                 + 1
                 != block.get_id()
             {
+                info!("invalid block, wrong block id");
                 return false;
             }
 
@@ -270,6 +282,7 @@ impl Blockchain {
             // TODO validate block fee
 
             if previous_block.get_timestamp() >= block.get_timestamp() {
+                info!("invalid block, timestamp must be greater than previous block");
                 return false;
             }
 
@@ -284,10 +297,12 @@ impl Blockchain {
             //     //     info!("Hasn't completed handshake, will not send block??");
             //     // }
             // }
-            futures::stream::iter(block.get_transactions()).all(|transaction| {
-                self.validate_transaction(previous_block, transaction, fork_chains)
-            }).await
-            
+            futures::stream::iter(block.get_transactions())
+                .all(|transaction| {
+                    self.validate_transaction(previous_block, transaction, fork_chains)
+                })
+                .await
+
             // let transactions_valid = block
             //     .get_transactions()
             //     .par_iter()
@@ -311,25 +326,30 @@ impl Blockchain {
                     return true;
                 }
                 let utxoset = self.context.utxoset_ref.read().await;
-                if let Some(address) = utxoset.get_receiver_for_inputs(&tx.inputs)
-                {
+                if let Some(address) = utxoset.get_receiver_for_inputs(&tx.inputs) {
                     if !verify_bytes_message(&tx.hash(), tx.signature.clone(), &address) {
+                        info!("tx signature invalid");
                         return false;
                     };
 
                     // validate our outputs
                     // TODO: remove this clone?
                     let inputs_iterator_stream = futures::stream::iter(&tx.inputs);
-                    let inputs_are_valid = inputs_iterator_stream.all(|input| {
-                        if fork_chains.old_chain.len() == 0 {
-                            utxoset.is_output_spendable_at_block_id(input, previous_block.get_id())
-                            //true
-                        } else {
-                            utxoset.is_output_spendable_in_fork_branch(input, fork_chains)
-                            //false
-                        }
-                    }).await;
+                    let inputs_are_valid = inputs_iterator_stream
+                        .all(|input| {
+                            if fork_chains.old_chain.len() == 0 {
+                                info!("is_output_spendable_at_block_id");
+                                utxoset
+                                    .is_output_spendable_at_block_id(input, previous_block.get_id())
+                            } else {
+                                info!("is_output_spendable_in_fork_branch");
+                                utxoset.is_output_spendable_in_fork_branch(input, fork_chains)
+                            }
+                        })
+                        .await;
+
                     if !inputs_are_valid {
+                        info!("tx invalid inputs");
                         return false;
                     }
                     // validate that inputs are unspent
@@ -337,16 +357,22 @@ impl Blockchain {
                         .inputs
                         .iter()
                         .map(|input| {
-                            utxoset.output_status_from_output_id(input).unwrap().amount()
+                            utxoset
+                                .output_status_from_output_id(input)
+                                .unwrap()
+                                .amount()
                         })
                         .sum();
 
-                    let output_amt: u64 =
-                        tx.outputs.iter().map(|output| output.amount()).sum();
+                    let output_amt: u64 = tx.outputs.iter().map(|output| output.amount()).sum();
 
-                    output_amt >= input_amt
+                    let is_balanced = output_amt == input_amt;
+                    if !is_balanced {
+                        info!("inputs/outputs not balanced");
+                    }
+                    is_balanced
                 } else {
-                    // no input outputs, thus no output outputs.
+                    info!("no single receiver for inputs");
                     false
                 }
             }
@@ -372,11 +398,20 @@ mod tests {
 
     use tokio::sync::RwLock;
 
-    use crate::{block::RawBlock, blockchain::Blockchain, keypair::Keypair, panda_protos::{OutputIdProto, OutputProto, TransactionProto, transaction_proto::TxType}, test_utilities::{globals_init::{make_timestamp_generator_for_test}, mock_block::MockRawBlockForBlockchain}, utxoset::UtxoSet};
     use crate::utxoset::AbstractUtxoSet;
-    
-    use super::{AddBlockEvent, AbstractBlockchain};
-    
+    use crate::{
+        block::RawBlock,
+        blockchain::Blockchain,
+        keypair::Keypair,
+        panda_protos::{transaction_proto::TxType, OutputIdProto, OutputProto, TransactionProto},
+        test_utilities::{
+            globals_init::make_timestamp_generator_for_test, mock_block::MockRawBlockForBlockchain,
+        },
+        utxoset::UtxoSet,
+    };
+
+    use super::{AbstractBlockchain, AddBlockEvent};
+
     fn teardown() -> std::io::Result<()> {
         let dir_path = String::from("data/test/blocks/");
         for entry in std::fs::read_dir(dir_path)? {
@@ -393,11 +428,12 @@ mod tests {
     #[tokio::test]
     async fn double_spend_on_fork_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
-        let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> = Arc::new(RwLock::new(Box::new(UtxoSet::new())));
+        let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
+            Arc::new(RwLock::new(Box::new(UtxoSet::new())));
         let keypair = Keypair::new();
         // object under test
         let mut blockchain = Blockchain::new(utxoset_ref.clone());
-        
+
         //
         //           | e
         //      d2 \ | d
@@ -407,28 +443,46 @@ mod tests {
         //
         // This test will add blocks in this order:
         // a -> b -> c -> c2 -> d2 -> d -> e
-        
+
         // block_a has a single output in it
         let output_a = OutputProto::new(keypair.get_public_key().clone(), 2);
-        let tx_a = TransactionProto::new(vec![], vec![output_a], TxType::Normal, timestamp_generator.get_timestamp(), vec![]);
-        let output_a_input = OutputIdProto::new(tx_a.get_hash(), 0);
-        let mock_block_a: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForBlockchain::new(1, [1; 32], [0;32], vec![tx_a]));
-
-        // block_b spends the output in block_a and creates a new output
-        let output_b = OutputProto::new(keypair.get_public_key().clone(), 2);
-        let tx_b = TransactionProto::new(
-            vec![output_a_input.clone()],
-            vec![output_b],
+        let tx_a = TransactionProto::new(
+            vec![],
+            vec![output_a],
             TxType::Normal,
             timestamp_generator.get_timestamp(),
             vec![],
         );
+        let output_a_input = OutputIdProto::new(tx_a.get_hash(), 0);
+        let mock_block_a: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            1,
+            [1; 32],
+            [0; 32],
+            timestamp_generator.get_timestamp(),
+            vec![tx_a],
+        ));
+
+        // block_b spends the output in block_a and creates a new output
+        timestamp_generator.advance(1000);
+        let output_b = OutputProto::new(keypair.get_public_key().clone(), 2);
+        let tx_b = TransactionProto::new(
+            vec![output_a_input.clone()],
+            vec![output_b],
+            TxType::Seed,
+            timestamp_generator.get_timestamp(),
+            vec![],
+        );
         let output_b_input = OutputIdProto::new(tx_b.get_hash(), 0);
-        let mock_block_b: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForBlockchain::new(2, [2; 32], [1; 32], vec![tx_b]));
+        let mock_block_b: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            2,
+            [2; 32],
+            [1; 32],
+            timestamp_generator.get_timestamp(),
+            vec![tx_b],
+        ));
 
         // block_c spends the output in block_b and creates a new output
+        timestamp_generator.advance(1000);
         let output_c = OutputProto::new(keypair.get_public_key().clone(), 2);
         let tx_c = TransactionProto::new(
             vec![output_b_input.clone()],
@@ -438,10 +492,36 @@ mod tests {
             vec![],
         );
         let output_c_input = OutputIdProto::new(tx_c.get_hash(), 0);
-        let mock_block_c: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForBlockchain::new(3, [3; 32], [2; 32], vec![tx_c]));
+        let mock_block_c: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            3,
+            [3; 32],
+            [2; 32],
+            timestamp_generator.get_timestamp(),
+            vec![tx_c],
+        ));
+
+        // block_c_2 spends the output in block_b and creates a new output
+        timestamp_generator.advance(1);
+        let output_c_2 = OutputProto::new(keypair.get_public_key().clone(), 1);
+        let output_c_2_2 = OutputProto::new(keypair.get_public_key().clone(), 1);
+        let tx_c_2 = TransactionProto::new(
+            vec![output_b_input.clone()],
+            vec![output_c_2, output_c_2_2],
+            TxType::Normal,
+            timestamp_generator.get_timestamp(),
+            vec![],
+        );
+        let output_c_2_input = OutputIdProto::new(tx_c_2.get_hash(), 0);
+        let mock_block_c_2: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            3,
+            [6; 32],
+            [2; 32],
+            timestamp_generator.get_timestamp(),
+            vec![tx_c_2],
+        ));
 
         // block_d spends the output in block_c and creates a new output
+        timestamp_generator.advance(1000);
         let output_d = OutputProto::new(keypair.get_public_key().clone(), 2);
         let tx_d = TransactionProto::new(
             vec![output_c_input.clone()],
@@ -451,37 +531,16 @@ mod tests {
             vec![],
         );
         let output_d_input = OutputIdProto::new(tx_d.get_hash(), 0);
-        let mock_block_c: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForBlockchain::new(4, [4; 32], [3; 32], vec![tx_d]));
-
-
-        // block_e spends the output in block_d and creates a new output
-        let output_e = OutputProto::new(keypair.get_public_key().clone(), 2);
-        let tx_e = TransactionProto::new(
-            vec![output_d_input.clone()],
-            vec![output_e],
-            TxType::Normal,
+        let mock_block_d: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            4,
+            [4; 32],
+            [3; 32],
             timestamp_generator.get_timestamp(),
-            vec![],
-        );
-        let output_e_input = OutputIdProto::new(tx_e.get_hash(), 0);
-        let mock_block_d: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForBlockchain::new(5, [5; 32], [4; 32], vec![tx_e]));
+            vec![tx_d],
+        ));
 
-        // block_d spends the output in block_c and creates a new output
-        let output_c_2 = OutputProto::new(keypair.get_public_key().clone(), 1);
-        let tx_c_2 = TransactionProto::new(
-            vec![output_b_input.clone()],
-            vec![output_c_2],
-            TxType::Normal,
-            timestamp_generator.get_timestamp(),
-            vec![],
-        );
-        let output_c_2_input = OutputIdProto::new(tx_c_2.get_hash(), 0);
-        let mock_block_c_2: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForBlockchain::new(3, [3; 32], [2; 32], vec![tx_c_2]));
-        
-        // block_d spends the output in block_c and creates a new output
+        // block_d_2 spends the output in block_c and creates a new output
+        timestamp_generator.advance(1000);
         let output_d_2 = OutputProto::new(keypair.get_public_key().clone(), 1);
         let tx_d_2 = TransactionProto::new(
             vec![output_c_2_input.clone()],
@@ -490,188 +549,56 @@ mod tests {
             timestamp_generator.get_timestamp(),
             vec![],
         );
-        let output_d_2_input = OutputIdProto::new(tx_d_2.get_hash(), 0);
-        let mock_block_d_2: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForBlockchain::new(4, [4; 32], [3; 32], vec![tx_d_2]));
+        let _output_d_2_input = OutputIdProto::new(tx_d_2.get_hash(), 0);
+        let mock_block_d_2: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            4,
+            [7; 32],
+            [6; 32],
+            timestamp_generator.get_timestamp(),
+            vec![tx_d_2],
+        ));
+
+        // block_e spends the output in block_d and creates a new output
+        timestamp_generator.advance(1000);
+        let output_e = OutputProto::new(keypair.get_public_key().clone(), 2);
+        let tx_e = TransactionProto::new(
+            vec![output_d_input.clone()],
+            vec![output_e],
+            TxType::Normal,
+            timestamp_generator.get_timestamp(),
+            vec![],
+        );
+        let _output_e_input = OutputIdProto::new(tx_e.get_hash(), 0);
+        let mock_block_e: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            5,
+            [5; 32],
+            [4; 32],
+            timestamp_generator.get_timestamp(),
+            vec![tx_e],
+        ));
 
         let result: AddBlockEvent = blockchain.add_block(mock_block_a).await;
         assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
 
         let result: AddBlockEvent = blockchain.add_block(mock_block_b).await;
         assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
-        
 
-    //     let mut prev_block_hash = block.hash();
-    //     let mut prev_block_id = block.id();
-    //     let mut prev_burn_fee = block.burnfee();
-    //     let mut prev_prev_burn_fee = block.burnfee();
-    //     let mut prev_timestamp = block.timestamp();
-    //     let first_block_hash = block.hash();
-    //     let first_block_id = block.id();
-    //     let first_burn_fee = block.burnfee();
-    //     let first_timestamp = block.timestamp();
+        let result: AddBlockEvent = blockchain.add_block(mock_block_c).await;
+        assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
 
-    //     for _ in 0..3 {
-    //         let timestamp = mock_timestamp_generator.next();
-    //         let block = Block::new(BlockCore::new(
-    //             prev_block_id + 1,
-    //             timestamp,
-    //             prev_block_hash,
-    //             *keypair.public_key(),
-    //             TREASURY,
-    //             BurnFee::burn_fee_adjustment_calculation(
-    //                 prev_burn_fee,
-    //                 prev_prev_burn_fee,
-    //                 timestamp,
-    //                 prev_timestamp,
-    //             ),
-    //             vec![],
-    //         ));
+        // This test will add blocks in this order:
+        // a -> b -> c -> c2 -> d2 -> d -> e
+        let result: AddBlockEvent = blockchain.add_block(mock_block_c_2).await;
+        assert_eq!(result, AddBlockEvent::Accepted);
 
-    //         prev_block_hash = block.hash().clone();
-    //         prev_block_id = block.id();
-    //         prev_burn_fee = block.burnfee();
-    //         prev_timestamp = block.timestamp();
-    //         prev_prev_burn_fee = blockchain
-    //             .get_block_by_hash(block.previous_block_hash())
-    //             .unwrap()
-    //             .burnfee();
-    //         let result: AddBlockEvent = blockchain.add_block(block.clone()).await;
-    //         assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
-    //     }
-    //     // make a fork
-    //     let timestamp = mock_timestamp_generator.next() + 1;
-    //     let block_y1 = Block::new(BlockCore::new(
-    //         first_block_id + 1,
-    //         timestamp,
-    //         first_block_hash,
-    //         *keypair.public_key(),
-    //         TREASURY,
-    //         BurnFee::burn_fee_adjustment_calculation(
-    //             first_burn_fee,
-    //             first_burn_fee,
-    //             timestamp,
-    //             first_timestamp,
-    //         ),
-    //         vec![],
-    //     ));
+        let result: AddBlockEvent = blockchain.add_block(mock_block_d_2).await;
+        assert_eq!(result, AddBlockEvent::AcceptedAsNewLongestChain);
 
-    //     let result: AddBlockEvent = blockchain.add_block(block_y1.clone()).await;
-    //     assert_eq!(result, AddBlockEvent::Accepted);
+        let result: AddBlockEvent = blockchain.add_block(mock_block_d).await;
+        assert_eq!(result, AddBlockEvent::Accepted);
 
-    //     // make a valid tx to add to block y2
-    //     let slip_pair = slips.pop().unwrap();
-    //     let to_slip = OutputSlip::new(*keypair.public_key(), slip_pair.1.amount());
-    //     let tx = Transaction::sign(TransactionCore::new(
-    //         create_timestamp(),
-    //         vec![slip_pair.0],
-    //         vec![to_slip],
-    //         TransactionType::Normal,
-    //         vec![],
-    //     ));
-    //     let double_spent_attempt_input = SlipID::new(tx.hash(), 0);
-    //     let double_spent_attempt_to_slip =
-    //         OutputSlip::new(*keypair.public_key(), slip_pair.1.amount());
-
-    //     let double_spent_attempt_tx = Transaction::sign(TransactionCore::new(
-    //         create_timestamp(),
-    //         vec![double_spent_attempt_input],
-    //         vec![double_spent_attempt_to_slip],
-    //         TransactionType::Normal,
-    //         vec![],
-    //     ));
-    //     let txs = vec![tx];
-    //     let timestamp = mock_timestamp_generator.next();
-    //     let block_y2 = Block::new(BlockCore::new(
-    //         block_y1.id() + 1,
-    //         timestamp,
-    //         block_y1.hash(),
-    //         *keypair.public_key(),
-    //         TREASURY,
-    //         BurnFee::burn_fee_adjustment_calculation(
-    //             block_y1.burnfee(),
-    //             blockchain
-    //                 .get_block_by_hash(block_y1.previous_block_hash())
-    //                 .unwrap()
-    //                 .burnfee(),
-    //             timestamp,
-    //             block_y1.timestamp(),
-    //         ),
-    //         txs,
-    //     ));
-
-    //     let result: AddBlockEvent = blockchain.add_block(block_y2.clone()).await;
-    //     assert_eq!(result, AddBlockEvent::Accepted);
-
-    //     let timestamp = mock_timestamp_generator.next();
-    //     let block_z2 = Block::new(BlockCore::new(
-    //         block_y1.id() + 1,
-    //         timestamp,
-    //         block_y1.hash(),
-    //         *keypair.public_key(),
-    //         TREASURY,
-    //         BurnFee::burn_fee_adjustment_calculation(
-    //             block_y1.burnfee(),
-    //             blockchain
-    //                 .get_block_by_hash(block_y1.previous_block_hash())
-    //                 .unwrap()
-    //                 .burnfee(),
-    //             timestamp,
-    //             prev_timestamp,
-    //         ),
-    //         vec![],
-    //     ));
-    //     let result: AddBlockEvent = blockchain.add_block(block_z2.clone()).await;
-
-    //     assert_eq!(result, AddBlockEvent::Accepted);
-
-    //     let double_spent_attempt_txs = vec![double_spent_attempt_tx.clone()];
-
-    //     let timestamp = mock_timestamp_generator.next();
-    //     let block_z3 = Block::new(BlockCore::new(
-    //         block_z2.id() + 1,
-    //         timestamp,
-    //         block_z2.hash(),
-    //         *keypair.public_key(),
-    //         TREASURY,
-    //         BurnFee::burn_fee_adjustment_calculation(
-    //             block_z2.burnfee(),
-    //             blockchain
-    //                 .get_block_by_hash(block_z2.previous_block_hash())
-    //                 .unwrap()
-    //                 .burnfee(),
-    //             timestamp,
-    //             prev_timestamp,
-    //         ),
-    //         double_spent_attempt_txs.clone(),
-    //     ));
-
-    //     let result: AddBlockEvent = blockchain.add_block(block_z3.clone()).await;
-    //     // z3 is rejected because it contains an unspendable transaction from y2
-    //     assert_eq!(result, AddBlockEvent::InvalidBlock);
-
-    //     let timestamp = mock_timestamp_generator.next();
-    //     let block_y3 = Block::new(BlockCore::new(
-    //         block_y2.id() + 1,
-    //         timestamp,
-    //         block_y2.hash(),
-    //         *keypair.public_key(),
-    //         TREASURY,
-    //         BurnFee::burn_fee_adjustment_calculation(
-    //             block_y2.burnfee(),
-    //             blockchain
-    //                 .get_block_by_hash(block_y2.previous_block_hash())
-    //                 .unwrap()
-    //                 .burnfee(),
-    //             timestamp,
-    //             prev_timestamp,
-    //         ),
-    //         double_spent_attempt_txs.clone(),
-    //     ));
-
-    //     let result: AddBlockEvent = blockchain.add_block(block_y3.clone()).await;
-    //     // y3 also spends from y2 but is accepted because y2 is it's parent
-    //     assert_eq!(result, AddBlockEvent::Accepted);
+        let result: AddBlockEvent = blockchain.add_block(mock_block_e).await;
+        assert_eq!(result, AddBlockEvent::AcceptedAsNewLongestChain);
     }
 
     // #[tokio::test]
@@ -1002,7 +929,6 @@ mod tests {
     //     //             || result == AddBlockEvent::AcceptedAsLongestChain
     //     //             || result == AddBlockEvent::AcceptedAsNewLongestChain
     //     //     );
-    
 
     //     //     prev_block_hash = block.hash().clone();
     //     //     prev_block_id = block.id();
@@ -1014,4 +940,3 @@ mod tests {
     //     teardown().expect("Teardown failed");
     // }
 }
-

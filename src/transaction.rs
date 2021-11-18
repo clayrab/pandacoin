@@ -25,6 +25,8 @@ impl TransactionProto {
             signature: vec![],
         };
         tx.hash = tx.generate_hash();
+        //tx.signature = Signature::from_compact(&[0; 64]).unwrap().try_into().unwrap();
+        tx.signature = vec![0; 64];
         tx
     }
     fn generate_hash(&self) -> Option<Vec<u8>> {

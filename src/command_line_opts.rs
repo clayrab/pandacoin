@@ -20,7 +20,7 @@ mod test {
 
     // use super::*;
     // #[test]
-    // fn test_complete_name() {    
+    // fn test_complete_name() {
     //     assert_eq!(
     //         Some(String::from("asdf")),
     //         COMMAND_LINE_OPTS_GLOBAL.get().unwrap().password

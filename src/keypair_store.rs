@@ -56,12 +56,10 @@ impl KeypairStore {
             );
         }
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
-        
+
         KeypairStore {
             keypair: keypair,
-            context: KeypairStoreContext{
-                command_line_opts
-            }
+            context: KeypairStoreContext { command_line_opts },
         }
     }
     /// Create new `KeypairStore` for testing from existing wallet in test data.
@@ -72,9 +70,7 @@ impl KeypairStore {
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
         KeypairStore {
             keypair: keypair,
-            context: KeypairStoreContext{
-                command_line_opts
-            }
+            context: KeypairStoreContext { command_line_opts },
         }
     }
     /// get the keypair
@@ -135,12 +131,8 @@ impl KeypairStore {
 
 #[cfg(test)]
 mod test {
-    
-    use clap::Clap;
 
     use crate::test_utilities::globals_init::make_keypair_store_for_test;
-
-    use super::*;
 
     #[tokio::test]
     async fn mock_keypair_store_test() {
@@ -153,12 +145,7 @@ mod test {
         let keypair_store = make_keypair_store_for_test();
         assert_eq!(
             "02fc238df3474c274887f85b3f36d3adffa5465f15840779da6fc82f912c4d1009",
-            hex::encode(
-                keypair_store
-                .get_keypair()
-                .get_public_key()
-                .serialize()
-            )
+            hex::encode(keypair_store.get_keypair().get_public_key().serialize())
         );
     }
 }
