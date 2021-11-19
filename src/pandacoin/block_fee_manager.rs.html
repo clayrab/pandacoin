@@ -178,8 +178,6 @@
 <span id="178">178</span>
 <span id="179">179</span>
 <span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block::RawBlock</span>,
     <span class="ident">constants</span>::{<span class="ident">BLOCK_TIME_TARGET_MS</span>, <span class="ident">NUMBER_OF_BLOCKS_FOR_TARGET_CALC</span>, <span class="ident">STARTING_BLOCK_FEE</span>},
@@ -257,12 +255,10 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    
+
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::constants::BLOCK_TIME_TARGET_MS</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::globals_init::make_timestamp_generator_for_test</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::mock_block::MockRawBlockForBlockFee</span>;
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">constants::BLOCK_TIME_TARGET_MS</span>,
-    };
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">block_fee_basic_test</span>() {

@@ -49,6 +49,7 @@
 <span id="49">49</span>
 <span id="50">50</span>
 <span id="51">51</span>
+<span id="52">52</span>
 </pre><pre class="rust"><code><span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">block</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">block_fee_manager</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">blockchain</span>;
@@ -62,6 +63,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">output</span>;
 <span class="attribute">#[<span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;proto/out/panda_protos.rs&quot;</span>]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">panda_protos</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests_setup</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">timestamp_generator</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">transaction</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">types</span>;
@@ -80,8 +82,8 @@
 <span class="attribute">#[<span class="ident">macro_use</span>]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">lazy_static</span>;
 
-<span class="attribute">#[<span class="ident">macro_use</span>]</span>
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">tracing</span>;
+<span class="comment">// #[macro_use]</span>
+<span class="comment">// extern crate tracing;</span>
 
 <span class="doccomment">/// Error returned by most functions.</span>
 <span class="doccomment">///</span>

@@ -149,19 +149,6 @@
 <span id="149">149</span>
 <span id="150">150</span>
 <span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
 </pre><pre class="rust"><code><span class="doccomment">/*!
 
 # Keypair Store
@@ -220,12 +207,10 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
             );
         }
         <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">Keypair::from_secret_slice</span>(<span class="kw-2">&amp;</span><span class="ident">decrypted_buffer</span>).<span class="ident">unwrap</span>();
-        
+
         <span class="ident">KeypairStore</span> {
             <span class="ident">keypair</span>: <span class="ident">keypair</span>,
-            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span>{
-                <span class="ident">command_line_opts</span>
-            }
+            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span> { <span class="ident">command_line_opts</span> },
         }
     }
     <span class="doccomment">/// Create new `KeypairStore` for testing from existing wallet in test data.</span>
@@ -236,9 +221,7 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
         <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">Keypair::from_secret_slice</span>(<span class="kw-2">&amp;</span><span class="ident">decrypted_buffer</span>).<span class="ident">unwrap</span>();
         <span class="ident">KeypairStore</span> {
             <span class="ident">keypair</span>: <span class="ident">keypair</span>,
-            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span>{
-                <span class="ident">command_line_opts</span>
-            }
+            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span> { <span class="ident">command_line_opts</span> },
         }
     }
     <span class="doccomment">/// get the keypair</span>
@@ -299,12 +282,8 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
-    
-    <span class="kw">use</span> <span class="ident">clap::Clap</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::globals_init::make_keypair_store_for_test</span>;
-
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mock_keypair_store_test</span>() {
@@ -317,12 +296,7 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
         <span class="kw">let</span> <span class="ident">keypair_store</span> <span class="op">=</span> <span class="ident">make_keypair_store_for_test</span>();
         <span class="macro">assert_eq!</span>(
             <span class="string">&quot;02fc238df3474c274887f85b3f36d3adffa5465f15840779da6fc82f912c4d1009&quot;</span>,
-            <span class="ident">hex::encode</span>(
-                <span class="ident">keypair_store</span>
-                .<span class="ident">get_keypair</span>()
-                .<span class="ident">get_public_key</span>()
-                .<span class="ident">serialize</span>()
-            )
+            <span class="ident">hex::encode</span>(<span class="ident">keypair_store</span>.<span class="ident">get_keypair</span>().<span class="ident">get_public_key</span>().<span class="ident">serialize</span>())
         );
     }
 }

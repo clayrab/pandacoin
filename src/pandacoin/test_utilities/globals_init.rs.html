@@ -17,12 +17,19 @@
 <span id="17">17</span>
 <span id="18">18</span>
 <span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">clap::Clap</span>;
-<span class="kw">use</span> <span class="ident">tokio::sync::RwLock</span>;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">command_line_opts::CommandLineOpts</span>, <span class="ident">keypair_store::KeypairStore</span>, <span class="ident">test_utilities</span>::{<span class="ident">mock_blockchain::MockBlockchain</span>, <span class="ident">mock_timestamp_generator::MockTimestampGenerator</span>}, <span class="ident">timestamp_generator::AbstractTimestampGenerator</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">command_line_opts::CommandLineOpts</span>, <span class="ident">keypair_store::KeypairStore</span>,
+    <span class="ident">test_utilities::mock_timestamp_generator::MockTimestampGenerator</span>,
+    <span class="ident">timestamp_generator::AbstractTimestampGenerator</span>,
+};
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_keypair_store_for_test</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KeypairStore</span> {
     <span class="kw">let</span> <span class="ident">command_line_opts</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">CommandLineOpts::parse_from</span>(<span class="kw-2">&amp;</span>[
@@ -33,9 +40,11 @@
     <span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>.<span class="ident">clone</span>())
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_timestamp_generator_for_test</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractTimestampGenerator</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_timestamp_generator_for_test</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractTimestampGenerator</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span>
+{
     <span class="ident">Arc::new</span>(<span class="ident">Box::new</span>(<span class="ident">MockTimestampGenerator::new</span>()))
-}</code></pre></div>
+}
+</code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="pandacoin" data-search-index-js="../../../search-index.js" data-search-js="../../../search.js"></div>
     <script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script>
 </body></html>
