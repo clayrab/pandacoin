@@ -61,13 +61,13 @@ impl RawBlock for MockRawBlockForUTXOSet {
     }
 }
 
-
 /// This Mock RawBlock is used for testing the blockchain Set
 #[derive(Debug)]
 pub struct MockRawBlockForBlockchain {
     mock_block_id: u32,
     mock_block_hash: Sha256Hash,
     mock_parent_hash: Sha256Hash,
+    timestamp: u64,
     transactions: Vec<TransactionProto>,
 }
 impl MockRawBlockForBlockchain {
@@ -75,12 +75,14 @@ impl MockRawBlockForBlockchain {
         mock_block_id: u32,
         mock_block_hash: Sha256Hash,
         mock_parent_hash: Sha256Hash,
+        timestamp: u64,
         transactions: Vec<TransactionProto>,
     ) -> Self {
         MockRawBlockForBlockchain {
             mock_block_id,
             mock_block_hash,
             mock_parent_hash,
+            timestamp,
             transactions,
         }
     }
@@ -94,6 +96,9 @@ impl RawBlock for MockRawBlockForBlockchain {
     }
     fn get_previous_block_hash(&self) -> Sha256Hash {
         self.mock_parent_hash
+    }
+    fn get_timestamp(&self) -> u64 {
+        self.timestamp
     }
     fn get_transactions(&self) -> &Vec<TransactionProto> {
         &self.transactions

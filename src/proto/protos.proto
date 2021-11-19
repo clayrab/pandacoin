@@ -18,7 +18,8 @@ message TransactionProto {
     repeated OutputProto outputs = 4;
     enum TxType {
         NORMAL = 0;
-        SERVICE = 1;
+        SEED = 1;
+        SERVICE = 2;
     }
     TxType txtype = 5;
     bytes message = 6;

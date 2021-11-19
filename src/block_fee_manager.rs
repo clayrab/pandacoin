@@ -75,12 +75,10 @@ impl BlockFeeManager {
 #[cfg(test)]
 mod test {
     use super::*;
-    
+
+    use crate::constants::BLOCK_TIME_TARGET_MS;
     use crate::test_utilities::globals_init::make_timestamp_generator_for_test;
     use crate::test_utilities::mock_block::MockRawBlockForBlockFee;
-    use crate::{
-        constants::BLOCK_TIME_TARGET_MS,
-    };
 
     #[tokio::test]
     async fn block_fee_basic_test() {

@@ -32,16 +32,11 @@ impl AbstractTimestampGenerator for SystemTimestampGenerator {}
 mod test {
     use crate::test_utilities::globals_init::make_timestamp_generator_for_test;
 
-    use super::*;
-
     #[tokio::test]
     async fn mock_timestamp_generator_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
         let first_timestamp = timestamp_generator.get_timestamp();
         timestamp_generator.advance(1000);
-        assert_eq!(
-            first_timestamp + 1000,
-            timestamp_generator.get_timestamp()
-        );
+        assert_eq!(first_timestamp + 1000, timestamp_generator.get_timestamp());
     }
 }
