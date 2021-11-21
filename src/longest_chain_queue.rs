@@ -1,4 +1,4 @@
-use crate::types::Sha256Hash;
+use crate::{types::Sha256Hash, block::RawBlock};
 
 #[derive(Debug, Clone)]
 pub struct LongestChainQueue {
@@ -7,9 +7,15 @@ pub struct LongestChainQueue {
 
 impl LongestChainQueue {
     /// Create new `LongestChainQueue`
-    pub fn new() -> Self {
+    // pub fn new() -> Self {
+    //     LongestChainQueue {
+    //         block_hashes: vec![],
+    //     }
+    // }
+
+    pub fn new(genesis_block: &Box<dyn RawBlock>) -> Self {
         LongestChainQueue {
-            block_hashes: vec![],
+            block_hashes: vec![genesis_block.get_hash().clone()],
         }
     }
 
@@ -23,7 +29,7 @@ impl LongestChainQueue {
 
     pub fn block_hash_by_id(&self, id: u32) -> Option<&Sha256Hash> {
         if self.block_hashes.len() >= id as usize {
-            Some(&self.block_hashes[id as usize - 1])
+            Some(&self.block_hashes[id as usize])
         } else {
             None
         }
