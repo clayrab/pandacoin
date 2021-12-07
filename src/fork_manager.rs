@@ -1,25 +1,45 @@
 use std::{collections::{HashMap, HashSet}, sync::Arc};
 
-use sha2::Sha256;
+use futures::TryFutureExt;
 
-use crate::{block::RawBlock, constants::Constants, types::Sha256Hash, longest_chain_queue::LongestChainQueue, blocks_database::BlocksDatabase, block_fee_manager::{BlockFeeManager, BlockFeeAggregateForkData}};
+use crate::{block::RawBlock, constants::Constants, types::Sha256Hash, longest_chain_queue::LongestChainQueue, blocks_database::BlocksDatabase, block_fee_manager::BlockFeeAggregateForkData};
 
 #[derive(Debug)]
 pub struct ForkBlock {
     fork_children: HashSet<Sha256Hash>,
     /// meta data used by burnfee
     block_fee_aggregate_fork_data: BlockFeeAggregateForkData,
-
 }
 
 #[derive(Debug)]
 pub struct ForkManagerContext {
     constants: Arc<Constants>,
-    //blockchain_ref: Arc<RwLock<Box<dyn AbstractBlockchain + Send + Sync>>>
 }
 
-// TODO: it might have been clearer to keep the tips in a separate structure since they arena't really fork_blocks...
-// all the logic which uses new() rather than new_with_children and empty fork_children is really to do with this issue...
+///
+/// Fork Manager
+/// 
+/// The datastructure maintains a structure like the following:
+/// 
+///     [F]
+///      |  [F]
+///      |   |  [F]
+///      |   | /
+///     [F] [F] 
+///      | /
+///     [F] 
+///      |
+///     [R]
+/// 
+/// [F] = ForkBlock
+/// [R] = Root
+/// The Root will move relative to the Latest Block on the Longest Chain by MAX_REORG blocks.
+/// As ForkBlocks becomes the Root, their blocks off of the Longest Chain will be cleaned up
+/// from the BlocksDatabase. Blocks may be added at any point in the datastructure and only
+/// datastructure will maintain this structure with ForkBlocks only at splits in the chain.
+/// We can then leverage this structure to attach aggregated metaaata to ForkBlocks and
+/// optimize computation of validity of potential forks.
+/// 
 #[derive(Debug)]
 pub struct ForkManager {
     /// These are locations where we have a fork in the blockchain, i.e. where a block has
@@ -42,16 +62,16 @@ impl ForkBlock {
             block_fee_aggregate_fork_data: BlockFeeAggregateForkData::new(),
         }
     }
-    pub fn new_with_children(child_1: Sha256Hash, child_2: Sha256Hash) -> Self {
-        // TODO compute block_fee_manager
-        let mut fork_children = HashSet::new();
-        fork_children.insert(child_1);
-        fork_children.insert(child_2);
-        ForkBlock {
-            fork_children: fork_children,
-            block_fee_aggregate_fork_data: BlockFeeAggregateForkData::new(),
-        }
-    }
+    // pub fn new_with_children(child_1: Sha256Hash, child_2: Sha256Hash) -> Self {
+    //     // TODO compute block_fee_manager
+    //     let mut fork_children = HashSet::new();
+    //     fork_children.insert(child_1);
+    //     fork_children.insert(child_2);
+    //     ForkBlock {
+    //         fork_children: fork_children,
+    //         block_fee_aggregate_fork_data: BlockFeeAggregateForkData::new(),
+    //     }
+    // }
 }
 
 impl ForkManager {
@@ -78,17 +98,51 @@ impl ForkManager {
         // roll forward.
     }
 
-    pub async fn get_previous_ancestor_fork_block(&self, block_hash: &Sha256Hash) -> &ForkBlock {
-        &self.fork_blocks.get(self.fork_block_pointers.get(block_hash).unwrap()).unwrap()
+    pub async fn get_previous_ancestor_fork_block(&self, block_hash: &Sha256Hash) -> Option<(&Sha256Hash, &ForkBlock)> {
+        if let Some(fork_block_pointer_hash) = self.fork_block_pointers.get(block_hash) {
+            if fork_block_pointer_hash == block_hash {
+                None
+            } else {
+                if let Some(fork_block) = self.fork_blocks.get(fork_block_pointer_hash) {
+                    Some((fork_block_pointer_hash, fork_block))
+                } else {
+                    None
+                }
+            }
+        } else {
+            None
+        }
     }
 
-    pub async fn get_previous_ancestor_fork_block_hash(&self, block_hash: &Sha256Hash) -> Option<&Sha256Hash> {
+    pub fn get_previous_ancestor_fork_block_hash(&self, block_hash: &Sha256Hash) -> Option<&Sha256Hash> {
         println!("get_previous_ancestor_fork_block_hash {:?}", block_hash);
         self.fork_block_pointers.get(block_hash)
     }
     pub fn get_fork_children_of_fork_block(&self, fork_block_hash: &Sha256Hash) -> &HashSet<Sha256Hash> {
         &self.fork_blocks.get(fork_block_hash).unwrap().fork_children
     }
+
+    // pub fn get_block_hash_by_id_in_fork(&self, block_id: u32, fork_block_hash: &Sha256Hash, blocks_database: &BlocksDatabase) -> &Sha256Hash {
+    //     let mut next_ancestor_fork_block_hash = fork_block_hash;
+        
+    //     let mut next_ancestor_fork_block_id = blocks_database.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
+    //     let mut next_ancestor_block_test_id;
+    //     loop {
+    //         next_ancestor_block_test_id = blocks_database.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
+    //         if next_ancestor_block_test_id > block_id {
+    //             break;
+    //         }            
+    //         next_ancestor_fork_block_hash = self.get_previous_ancestor_fork_block_hash(next_ancestor_fork_block_hash).unwrap();
+    //         next_ancestor_fork_block_id = blocks_database.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
+    //     }
+    //     //let next_ancestor_fork_block = blocks_database.block_by_hash(next_ancestor_fork_block_hash).unwrap();
+    //     //let fork_block_id = next_ancestor_fork_block.get_id();
+    //     let mut previous_block = blocks_database.block_by_hash(next_ancestor_fork_block_hash).unwrap();
+    //     for _i in 1..(next_ancestor_fork_block_id - block_id) {
+    //         previous_block = blocks_database.block_by_hash(&previous_block.get_previous_block_hash()).unwrap();
+    //     }
+    //     &previous_block.get_hash()
+    // }
 
     pub async fn get_next_descendant_fork_block_hash(&self, block_hash: &Sha256Hash, blocks_database: &mut BlocksDatabase) -> Option<&Sha256Hash> {
         println!("get_next_descendant_fork_block_hash {:?}", block_hash);
@@ -121,46 +175,33 @@ impl ForkManager {
         found_fork_block
     }
 
-    pub async fn roll_forward_on_fork(&mut self, this_block: &Box<dyn RawBlock>, blocks_database: &mut BlocksDatabase) {
-        println!("roll_forward_on_fork {:?}", this_block.get_hash());
-        if !self.fork_blocks.contains_key(&this_block.get_previous_block_hash()) {
-            // if the parent is not a fork block, it should become one, we need to find it's other child...
-            // it's other child is one of it's fork_block's children...
-            //let past_fork_block_hash = self.fork_block_pointers.get(&this_block.get_previous_block_hash()).unwrap();
-            let found_fork_block_hash = self.get_next_descendant_fork_block_hash(&this_block.get_previous_block_hash(), blocks_database).await;
-            // insert the new fork_block with it's two children, this block and the 
-            assert!(found_fork_block_hash.is_some());
-            let new_inner_fork_block = ForkBlock::new_with_children(this_block.get_hash().clone(), found_fork_block_hash.unwrap().clone());
-            self.fork_blocks.insert(this_block.get_previous_block_hash(), new_inner_fork_block);
-        
-        } else if self.fork_blocks.contains_key(&this_block.get_previous_block_hash()) {
-            // else if the parent is a fork block but has no children, remove it 
-            let previous_tip = self.fork_blocks.get(&this_block.get_previous_block_hash()).unwrap();
-            if previous_tip.fork_children.is_empty() {
-                self.fork_blocks.remove(&this_block.get_previous_block_hash());
-            }
+    // recursive function for rolling forward, previous_hash should begin at the descendent ForkBlock
+    fn roll_forward_sub_branch(previous_hash: &Sha256Hash, ancestor_fork_block_hash: &Sha256Hash, descendent_fork_block: &mut ForkBlock, number_of_blocks_for_target_calc: u64, blocks_database: &BlocksDatabase) {
+        let next_parent_hash = blocks_database.block_by_hash(&previous_hash).unwrap().get_previous_block_hash();
+        if &next_parent_hash != ancestor_fork_block_hash {
+            let next_parent_block = blocks_database.block_by_hash(&next_parent_hash).unwrap();
+            // roll forward on the way out so we go backwards.
+            descendent_fork_block.block_fee_aggregate_fork_data.roll_forward(next_parent_block.get_timestamp(), next_parent_block.get_block_fee(), number_of_blocks_for_target_calc);
         }
-        // this block becomes a fork block(tip)
-        self.fork_blocks.insert(this_block.get_hash().clone(), ForkBlock::new());
     }
 
-    async fn roll_forward_on_fork_priv(&mut self, this_block: &Box<dyn RawBlock>, blocks_database: &mut BlocksDatabase) {
+    async fn roll_forward_on_fork(&mut self, this_block: &Box<dyn RawBlock>, blocks_database: &mut BlocksDatabase) {
         
         println!("roll_forward_on_fork_priv {:?}", this_block.get_hash());
         if !self.fork_blocks.contains_key(&this_block.get_previous_block_hash()) {
             // if the parent is not a fork block, it should become one, we need to find it's other child...
             // it's other child is one of it's fork_block's children...
-            // let past_fork_block_hash = self.fork_block_pointers.get(&this_block.get_previous_block_hash()).unwrap();
             
-            // insert the new fork_block with it's two children, this block and the 
-            let found_fork_block_hash = self.get_next_descendant_fork_block_hash(&this_block.get_previous_block_hash(), blocks_database).await.unwrap().clone();
-            let new_inner_fork_block = ForkBlock::new_with_children(this_block.get_hash().clone(), found_fork_block_hash.clone());
-            
-            
+            // insert the new fork_block with it's two children
+            let the_other_branch_fork_block_hash = self.get_next_descendant_fork_block_hash(&this_block.get_previous_block_hash(), blocks_database).await.unwrap().clone();
+            let mut old_descendent_fork_block = self.fork_blocks.remove(&the_other_branch_fork_block_hash).unwrap();
 
-            let mut next_parent_hash = found_fork_block_hash.clone();
+            // loop through all the pointers and roll_back and roll_forward all of the aggregate data structures
+            let mut next_parent_hash = the_other_branch_fork_block_hash.clone();
             
-            //println!("fork_blocks len {}", self.fork_blocks.len());
+            
+            // loop through all the pointers between the_other_branch_fork_block_hash and the new fork block and point them at
+            // the new fork block.
             while &next_parent_hash != &this_block.get_previous_block_hash() {
                 println!("replace pointer {:?}", next_parent_hash);
                 println!("to {:?}", this_block.get_previous_block_hash());
@@ -171,16 +212,26 @@ impl ForkManager {
                     })
                     .or_insert(this_block.get_previous_block_hash().clone());
                 next_parent_hash = blocks_database.block_by_hash(&next_parent_hash).unwrap().get_previous_block_hash();
-                
+                // roll back all the aggregate data...
+                old_descendent_fork_block.block_fee_aggregate_fork_data.roll_back()
             }
-            // insert the new ForkBlock
-            self.fork_blocks.insert(this_block.get_previous_block_hash(), new_inner_fork_block);
+            // the descendent_fork_block becomes the newly inserted ForkBlock(with 2 children)
+            old_descendent_fork_block.fork_children.insert(this_block.get_hash().clone());
+            old_descendent_fork_block.fork_children.insert(the_other_branch_fork_block_hash.clone());
+
+            // insert the "new" ForkBlock
+            self.fork_blocks.insert(this_block.get_previous_block_hash(), old_descendent_fork_block);
+            
+            // insert a new ForkBlock at the tip(it was removed above)
+            let mut new_descendent_fork_block = ForkBlock::new();
+            ForkManager::roll_forward_sub_branch(&next_parent_hash, &this_block.get_previous_block_hash(), &mut new_descendent_fork_block,  self.context.constants.get_number_of_blocks_for_target_calc(), blocks_database);
+            self.fork_blocks.insert(the_other_branch_fork_block_hash, new_descendent_fork_block);
         
             // point the old ancestor at the new ForkBlock
             let old_ancestor_fork_block_hash = self.fork_block_pointers.get(&this_block.get_previous_block_hash()).unwrap();
             self.fork_blocks.entry(old_ancestor_fork_block_hash.clone()).and_modify(|old_ancestor_fork_block| {
                 //println!("")
-                old_ancestor_fork_block.fork_children.remove(&found_fork_block_hash);
+                old_ancestor_fork_block.fork_children.remove(&the_other_branch_fork_block_hash);
                 old_ancestor_fork_block.fork_children.insert(this_block.get_previous_block_hash().clone());
             });
             // point the new fork at the new ForkBlock
@@ -204,7 +255,7 @@ impl ForkManager {
         
         println!("****************** roll forward... {:?}", block.get_hash().clone());
         // this block becomes a fork block(tip)
-        self.fork_blocks.insert(block.get_hash().clone(), ForkBlock::new());
+        // self.fork_blocks.insert(block.get_hash().clone(), ForkBlock::new());
         // the fork_block_pointer for this block is the same as it's parent
         self.fork_block_pointers.insert(block.get_hash().clone(), self.fork_block_pointers.get(&block.get_previous_block_hash()).unwrap().clone());
 
@@ -215,22 +266,28 @@ impl ForkManager {
                 // we don't want to remove previous_tip if it's the root
                 println!("building on root block...");
                 self.fork_blocks.get_mut(&block.get_previous_block_hash()).unwrap().fork_children.insert(block.get_hash().clone());
+                self.fork_blocks.insert(block.get_hash().clone(), ForkBlock::new());
             } else if previous_tip_fork_block.fork_children.is_empty() {
                 // if previous_tip has no children, remove it.
                 println!("remove {:?}", &block.get_previous_block_hash());
                 // get the ancestor ForkBlock children and remove the previous child and add the new child 
                 self.fork_blocks.get_mut(self.fork_block_pointers.get(block.get_hash()).unwrap()).unwrap().fork_children.remove(&block.get_previous_block_hash());
                 self.fork_blocks.get_mut(self.fork_block_pointers.get(block.get_hash()).unwrap()).unwrap().fork_children.insert(block.get_hash().clone());
-                // remove the previous_tip_fork_block
-                self.fork_blocks.remove(&block.get_previous_block_hash());
+                // remove the previous_tip_fork_block, roll it forward, and put it back in the new location
+
+                let mut fork_block = self.fork_blocks.remove(&block.get_previous_block_hash()).unwrap();
+                fork_block.block_fee_aggregate_fork_data.roll_forward(block.get_timestamp(), block.get_block_fee(), self.context.constants.get_number_of_blocks_for_target_calc());
+                self.fork_blocks.insert(block.get_hash().clone(), fork_block);
                 
             } else {
                 println!("here...");
-                self.roll_forward_on_fork_priv(block, blocks_database).await;
+                self.fork_blocks.insert(block.get_hash().clone(), ForkBlock::new());
+                self.roll_forward_on_fork(block, blocks_database).await;
             }
         } else {
             println!("here2...");
-            self.roll_forward_on_fork_priv(block, blocks_database).await;
+            self.fork_blocks.insert(block.get_hash().clone(), ForkBlock::new());
+            self.roll_forward_on_fork(block, blocks_database).await;
         }
 
         // if we are an block id > MAX_REORG, move the root forward 
@@ -247,14 +304,18 @@ impl ForkManager {
                 excluded_branch = self.fork_block_pointers.get(&excluded_branch).unwrap().clone();
             }
             println!("excluded_branch {:?}", excluded_branch);
-            self.remove_all_children(&self.root.clone(), blocks_database, longest_chain_queue, &excluded_branch);
-
+            
             self.fork_block_pointers.remove(&self.root);
-            self.root = reorg_block_hash.clone();
+            
             if self.fork_blocks.get(reorg_block_hash).is_none() {
                 self.fork_blocks.insert(reorg_block_hash.clone(), ForkBlock::new());
+            } else {
+                let mut fork_block = self.fork_blocks.remove(&self.root).unwrap();
+                fork_block.block_fee_aggregate_fork_data.roll_forward(reorg_block.get_timestamp(), reorg_block.get_block_fee(), self.context.constants.get_number_of_blocks_for_target_calc());
+                self.fork_blocks.insert(block.get_hash().clone(), fork_block);
             }
-
+            self.remove_all_children(&self.root.clone(), blocks_database, &excluded_branch);
+            self.root = reorg_block_hash.clone();
             // Update all the fork_block_pointers between the root and main branch
             // this block is not yet in the blocks database so we cannot get it in the while loops, update beforehand and
             // start the loop at the parent.
@@ -275,17 +336,15 @@ impl ForkManager {
                         *fork_ancestor_hash = reorg_block_hash.clone();
                     })
                     .or_insert(reorg_block_hash.clone());
-                next_parent_hash = blocks_database.block_by_hash(&next_parent_hash).unwrap().get_previous_block_hash();
-                
+                next_parent_hash = blocks_database.block_by_hash(&next_parent_hash).unwrap().get_previous_block_hash();   
             }
-
         }
     }
     
-    fn remove_all_children(&mut self, fork_block_hash: &Sha256Hash, blocks_database: &mut BlocksDatabase, longest_chain_queue: &LongestChainQueue, excluded_branch: &Sha256Hash) {
+    fn remove_all_children(&mut self, fork_block_hash: &Sha256Hash, blocks_database: &mut BlocksDatabase, excluded_branch: &Sha256Hash) {
         println!("remove_all_children {:?}", fork_block_hash);
         println!("excluded_branch {:?}", excluded_branch);
-        let mut fork_descendant_hashes = self.get_all_descendant_fork_block_hashes(&mut HashSet::new(), fork_block_hash, excluded_branch);
+        let fork_descendant_hashes = self.get_all_descendant_fork_block_hashes(&mut HashSet::new(), fork_block_hash, excluded_branch);
         //fork_descendant_hashes.remove(excluded_branch);
         for fork_hash in fork_descendant_hashes {
             println!("remove_all_children fork_hash {:?}", fork_hash);
@@ -317,7 +376,7 @@ mod test {
 
     use std::sync::Arc;
 
-    use crate::{blocks_database::BlocksDatabase, longest_chain_queue::LongestChainQueue, test_utilities::{mock_block::{MockRawBlockForForkManager, MockRawBlockForBlockchain}, globals_init::make_timestamp_generator_for_test}, block::{RawBlock, PandaBlock}, keypair::Keypair, constants::Constants};
+    use crate::{blocks_database::BlocksDatabase, longest_chain_queue::LongestChainQueue, test_utilities::{mock_block::{MockRawBlockForBlockchain}, globals_init::make_timestamp_generator_for_test}, block::{RawBlock, PandaBlock}, keypair::Keypair, constants::Constants};
 
     use super::ForkManager;
 
@@ -348,10 +407,11 @@ mod test {
             timestamp_generator.get_timestamp(),
             vec![],
         ));
-        let block_1_hash = mock_block_1.get_hash().clone();
+        let _block_1_hash = mock_block_1.get_hash().clone();
         longest_chain_queue.roll_forward(&mock_block_1.get_hash());
         fork_manager.roll_forward(&mock_block_1, &mut blocks_database, &longest_chain_queue).await;
         blocks_database.insert(mock_block_1.get_hash().clone(), mock_block_1);
+
         // insert block 2
         timestamp_generator.advance(1000);
         let mock_block_2: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
@@ -393,10 +453,10 @@ mod test {
         fork_manager.roll_forward(&mock_block_4, &mut blocks_database, &longest_chain_queue).await;
         blocks_database.insert(mock_block_4.get_hash().clone(), mock_block_4);
         
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash).await;
-        let fork_block = fork_manager.get_previous_ancestor_fork_block(&block_4_hash).await;
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash);
+        let fork_block = fork_manager.get_previous_ancestor_fork_block(&block_4_hash).await.unwrap();
         assert_eq!(fork_block_hash, Some(&genesis_block_hash));
-        assert_eq!(fork_block.fork_children.len(), 1);
+        assert_eq!(fork_block.1.fork_children.len(), 1);
         
         let fork_block_hash = fork_manager.get_next_descendant_fork_block_hash(&block_4_hash, &mut blocks_database).await;
         assert_eq!(fork_block_hash, None);
@@ -417,13 +477,13 @@ mod test {
         fork_manager.roll_forward(&mock_block_3b, &mut blocks_database, &longest_chain_queue).await;
         blocks_database.insert(mock_block_3b.get_hash().clone(), mock_block_3b);
 
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_2_hash).await;
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_2_hash);
         assert_eq!(fork_block_hash, Some(&genesis_block_hash));
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3_hash).await;
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3_hash);
         assert_eq!(fork_block_hash, Some(&block_2_hash));
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash).await;
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash);
         assert_eq!(fork_block_hash, Some(&block_2_hash));
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3b_hash).await;
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3b_hash);
         assert_eq!(fork_block_hash, Some(&block_2_hash));
         let fork_children = fork_manager.get_fork_children_of_fork_block(&genesis_block_hash);
         assert!(fork_children.contains(&block_2_hash));
@@ -459,7 +519,7 @@ mod test {
         assert_eq!(fork_block_hash, Some(&block_4b_hash));
         let fork_block_hash = fork_manager.get_next_descendant_fork_block_hash(&block_4b_hash, &mut blocks_database).await;
         assert_eq!(fork_block_hash, None);
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4b_hash).await;
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4b_hash);
         assert_eq!(fork_block_hash, Some(&block_2_hash));
 
         // insert block 3c
@@ -480,11 +540,11 @@ mod test {
         assert_eq!(fork_block_hash, None);
         let fork_block_hash = fork_manager.get_next_descendant_fork_block_hash(&block_3c_hash, &mut blocks_database).await;
         assert_eq!(fork_block_hash, None);
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3c_hash).await;
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3c_hash);
         assert_eq!(fork_block_hash, Some(&block_2_hash));
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3_hash).await.unwrap();
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_3_hash).unwrap();
         assert_eq!(fork_block_hash, &block_2_hash);
-        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash).await.unwrap();
+        let fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash).unwrap();
         assert_eq!(fork_block_hash, &block_2_hash);
         let fork_children = fork_manager.get_fork_children_of_fork_block(&block_2_hash);
         assert!(fork_children.contains(&block_3c_hash));
@@ -507,8 +567,13 @@ mod test {
         assert_eq!(fork_block_hash, None);
         let fork_block_hash = fork_manager.get_next_descendant_fork_block_hash(&block_4_hash, &mut blocks_database).await;
         assert_eq!(fork_block_hash, Some(&block_5_hash));
-        let previous_fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash).await.unwrap();
+        let previous_fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(&block_4_hash).unwrap();
         assert_eq!(previous_fork_block_hash, &block_2_hash);
         
+        let block_by_id_in_fork = blocks_database.get_block_hash_by_id_in_fork(3, &block_4b_hash, &fork_manager);
+        assert_eq!(block_by_id_in_fork.get_hash(), &block_3b_hash);
+
+        let block_by_id_in_fork = blocks_database.get_block_hash_by_id_in_fork(3, &block_4_hash, &fork_manager);
+        assert_eq!(block_by_id_in_fork.get_hash(), &block_3_hash);
     }
 }
