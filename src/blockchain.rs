@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use futures::StreamExt;
 use std::fmt::Debug;
 use std::sync::Arc;
-use tokio::sync::{RwLock, OnceCell};
+use tokio::sync::RwLock;
 
 use crate::Error;
 use crate::blocks_database::BlocksDatabase;
@@ -215,14 +215,14 @@ impl Blockchain {
         
     ) -> Self {
         let constants = Arc::new(Constants::new());
-        let constants = Arc::new(Constants::new());
         let longest_chain_queue = LongestChainQueue::new(&genesis_block);
         let fork_manager = ForkManager::new(&genesis_block, constants.clone());
+        let block_fee_manager = BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
         let blockchain = Blockchain {
             longest_chain_queue: longest_chain_queue,
             blocks_database: BlocksDatabase::new(genesis_block),
             fork_manager: fork_manager,
-            block_fee_manager: BlockFeeManager::new(constants.clone()),
+            block_fee_manager: block_fee_manager,
             context: BlockchainContext {
                 utxoset_ref
             },

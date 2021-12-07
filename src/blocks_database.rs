@@ -1,4 +1,4 @@
-use crate::{block::RawBlock, types::Sha256Hash};
+use crate::{block::RawBlock, types::Sha256Hash, fork_manager::ForkManager};
 use std::collections::HashMap;
 
 /// This class is used to store all blocks in a tree structure. We simply use the RawBlock's previous_block_hash
@@ -44,6 +44,30 @@ impl BlocksDatabase {
     pub fn contains_block_hash(&self, block_hash: &Sha256Hash) -> bool {
         self.blocks_database.contains_key(block_hash)
     }
+
+    pub fn get_block_hash_by_id_in_fork(&self, block_id: u32, fork_block_hash: &Sha256Hash, fork_manager: &ForkManager) -> &Box<dyn RawBlock> {
+        let mut next_ancestor_fork_block_hash = fork_block_hash;
+        
+        let mut next_ancestor_fork_block_id = self.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
+        let mut next_ancestor_block_test_id;
+        loop {
+            next_ancestor_block_test_id = self.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
+            if next_ancestor_block_test_id > block_id {
+                break;
+            }            
+            next_ancestor_fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(next_ancestor_fork_block_hash).unwrap();
+            next_ancestor_fork_block_id = self.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
+        }
+        //let next_ancestor_fork_block = blocks_database.block_by_hash(next_ancestor_fork_block_hash).unwrap();
+        //let fork_block_id = next_ancestor_fork_block.get_id();
+        let mut previous_block = self.block_by_hash(next_ancestor_fork_block_hash).unwrap();
+        for _i in 0..(next_ancestor_fork_block_id - block_id) {
+            previous_block = self.block_by_hash(&previous_block.get_previous_block_hash()).unwrap();
+        }
+        &previous_block
+    }
+
+
 }
 
 #[cfg(test)]

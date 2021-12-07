@@ -29,46 +29,46 @@ const PAYMENT_DELAY: u32 = 7 * 24 * 60 * (60000 / BLOCK_TIME_TARGET_MS as u32); 
 
 #[derive(Debug)]
 pub struct Constants {
-    pub STARTING_BLOCK_FEE: u64,
-    pub BLOCK_TIME_TARGET_MS: u64,
-    pub NUMBER_OF_BLOCKS_FOR_TARGET_CALC: u64,
-    pub TOTAL_LIT: u64,
-    pub IONS_PER_LIT: u64,
-    pub MAX_REORG: u32,
-    pub PAYMENT_DELAY: u32,
-}
+    pub starting_block_fee: u64,
+    pub block_time_target_ms: u64,
+    pub number_of_blocks_for_target_calc: u64,
+    pub total_lit: u64,
+    pub ions_per_lit: u64,
+    pub max_reorg: u32,
+    pub payment_delay: u32,
+ } 
 
 impl Constants {
     pub fn new() -> Self {
         Constants {
-            STARTING_BLOCK_FEE,
-            BLOCK_TIME_TARGET_MS,
-            NUMBER_OF_BLOCKS_FOR_TARGET_CALC,
-            TOTAL_LIT,
-            IONS_PER_LIT,
-            MAX_REORG,
-            PAYMENT_DELAY,
+            starting_block_fee: STARTING_BLOCK_FEE,
+            block_time_target_ms: BLOCK_TIME_TARGET_MS,
+            number_of_blocks_for_target_calc :NUMBER_OF_BLOCKS_FOR_TARGET_CALC,
+            total_lit :TOTAL_LIT,
+            ions_per_lit :IONS_PER_LIT,
+            max_reorg :MAX_REORG,
+            payment_delay :PAYMENT_DELAY,
         }
     }
     pub fn get_starting_block_fee(&self) -> u64 {
-        self.STARTING_BLOCK_FEE
+        self.starting_block_fee
     }
     pub fn get_block_time_target_ms(&self) -> u64 {
-        self.STARTING_BLOCK_FEE
+        self.block_time_target_ms
     }
     pub fn get_number_of_blocks_for_target_calc(&self) -> u64 {
-        self.NUMBER_OF_BLOCKS_FOR_TARGET_CALC
+        self.number_of_blocks_for_target_calc
     }
     pub fn get_total_lit(&self) -> u64 {
-        self.TOTAL_LIT
+        self.total_lit
     }
     pub fn get_ions_per_lit(&self) -> u64 {
-        self.IONS_PER_LIT
+        self.ions_per_lit
     }
     pub fn get_max_reorg(&self) -> u32 {
-        self.MAX_REORG
+        self.max_reorg
     }
     pub fn get_payment_delay(&self) -> u32 {
-        self.PAYMENT_DELAY
+        self.payment_delay
     }
 }

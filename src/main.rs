@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 use tracing::{event, Level};
 use tracing_subscriber;
 
-use pandacoin::blockchain::{AbstractBlockchain, AddBlockEvent, Blockchain};
+use pandacoin::blockchain::Blockchain;
 use pandacoin::command_line_opts::CommandLineOpts;
 use pandacoin::utxoset::{AbstractUtxoSet, UtxoSet};
 
@@ -50,7 +50,7 @@ pub async fn main() -> pandacoin::Result<()> {
 
     let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
         Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
-    let blockchain_mutex_ref =
+    let _blockchain_mutex_ref =
         Arc::new(RwLock::new(Box::new(Blockchain::new(genesis_block, utxoset_ref.clone()).await)));
     let mempool_mutex_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
         Arc::new(RwLock::new(Box::new(Mempool::new(utxoset_ref.clone()))));
@@ -70,16 +70,7 @@ pub async fn main() -> pandacoin::Result<()> {
     info!("this is info {}", timestamp_generator.get_timestamp());
     error!("this is printed by default");
 
-    // let mut blockchain = blockchain_mutex_ref.write().await;
-
-    // let result = blockchain.add_block(Box::new(genesis_block)).await;
-    // assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
-
-
-
     println!("Key: {}", keypair_store.get_keypair().get_public_key());
-    
-
 
     tokio::select! {
         res = run() => {
