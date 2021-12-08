@@ -1,4 +1,4 @@
-use crate::{block::RawBlock, types::Sha256Hash, fork_manager::ForkManager};
+use crate::{block::RawBlock, fork_manager::ForkManager, types::Sha256Hash};
 use std::collections::HashMap;
 
 /// This class is used to store all blocks in a tree structure. We simply use the RawBlock's previous_block_hash
@@ -37,7 +37,7 @@ impl BlocksDatabase {
         self.blocks_database.remove(block_hash);
     }
 
-    pub fn block_by_hash(&self, block_hash: &Sha256Hash) -> Option<&Box<dyn RawBlock>> {
+    pub fn get_block_by_hash(&self, block_hash: &Sha256Hash) -> Option<&Box<dyn RawBlock>> {
         self.blocks_database.get(block_hash)
     }
 
@@ -45,29 +45,36 @@ impl BlocksDatabase {
         self.blocks_database.contains_key(block_hash)
     }
 
-    pub fn get_block_hash_by_id_in_fork(&self, block_id: u32, fork_block_hash: &Sha256Hash, fork_manager: &ForkManager) -> &Box<dyn RawBlock> {
-        let mut next_ancestor_fork_block_hash = fork_block_hash;
-        
-        let mut next_ancestor_fork_block_id = self.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
-        let mut next_ancestor_block_test_id;
-        loop {
-            next_ancestor_block_test_id = self.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
-            if next_ancestor_block_test_id > block_id {
-                break;
-            }            
-            next_ancestor_fork_block_hash = fork_manager.get_previous_ancestor_fork_block_hash(next_ancestor_fork_block_hash).unwrap();
-            next_ancestor_fork_block_id = self.block_by_hash(next_ancestor_fork_block_hash).unwrap().get_id();
+    pub fn get_block_hash_from_fork_by_id(
+        &self,
+        target_block_id: u32,
+        starting_search_block_hash: &Sha256Hash,
+        fork_manager: &ForkManager,
+    ) -> Option<&Box<dyn RawBlock>> {
+        let starting_search_block = self.get_block_by_hash(starting_search_block_hash).unwrap();
+        let mut fork_block_hash = starting_search_block.get_hash();
+        let mut prev_fork_block_hash: &Sha256Hash = starting_search_block.get_hash();
+        // loop until we find a block id before the target
+        let mut next_block_id = starting_search_block.get_id();
+        while next_block_id > target_block_id {
+            prev_fork_block_hash = fork_block_hash;
+            fork_block_hash = fork_manager
+                .get_previous_ancestor_fork_block_hash(fork_block_hash)
+                .unwrap();
+            next_block_id = fork_manager
+                .get_fork_block(fork_block_hash)
+                .unwrap()
+                .get_block_id();
         }
-        //let next_ancestor_fork_block = blocks_database.block_by_hash(next_ancestor_fork_block_hash).unwrap();
-        //let fork_block_id = next_ancestor_fork_block.get_id();
-        let mut previous_block = self.block_by_hash(next_ancestor_fork_block_hash).unwrap();
-        for _i in 0..(next_ancestor_fork_block_id - block_id) {
-            previous_block = self.block_by_hash(&previous_block.get_previous_block_hash()).unwrap();
+        // crawl up the parent blocks until we reach the block id we are searching for
+        let mut nearest_descendant_block = self.get_block_by_hash(prev_fork_block_hash).unwrap();
+        while nearest_descendant_block.get_id() > target_block_id {
+            nearest_descendant_block = self
+                .get_block_by_hash(&nearest_descendant_block.get_previous_block_hash())
+                .unwrap();
         }
-        &previous_block
+        Some(nearest_descendant_block)
     }
-
-
 }
 
 #[cfg(test)]

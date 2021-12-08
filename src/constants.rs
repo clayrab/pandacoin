@@ -22,7 +22,7 @@ const MAX_REORG: u32 = 24 * 60 * (60000 / BLOCK_TIME_TARGET_MS as u32); // one d
 
 // This is the amount of time we wait before making payments to Block Producers or Automatic Staking.
 // Dealing with forking for Automatic Staking would add considerable complexity to validation of forks, therefore
-// we simply accept that this will be greater than the maximum reorganization length and can gain considerable 
+// we simply accept that this will be greater than the maximum reorganization length and can gain considerable
 // compute/memory performance and a simpler implementation.
 // **** PAYMENT_DELAY must be greater than or equal to MAX_REORG!!!! ****
 const PAYMENT_DELAY: u32 = 7 * 24 * 60 * (60000 / BLOCK_TIME_TARGET_MS as u32); // one week
@@ -36,18 +36,18 @@ pub struct Constants {
     pub ions_per_lit: u64,
     pub max_reorg: u32,
     pub payment_delay: u32,
- } 
+}
 
 impl Constants {
     pub fn new() -> Self {
         Constants {
             starting_block_fee: STARTING_BLOCK_FEE,
             block_time_target_ms: BLOCK_TIME_TARGET_MS,
-            number_of_blocks_for_target_calc :NUMBER_OF_BLOCKS_FOR_TARGET_CALC,
-            total_lit :TOTAL_LIT,
-            ions_per_lit :IONS_PER_LIT,
-            max_reorg :MAX_REORG,
-            payment_delay :PAYMENT_DELAY,
+            number_of_blocks_for_target_calc: NUMBER_OF_BLOCKS_FOR_TARGET_CALC,
+            total_lit: TOTAL_LIT,
+            ions_per_lit: IONS_PER_LIT,
+            max_reorg: MAX_REORG,
+            payment_delay: PAYMENT_DELAY,
         }
     }
     pub fn get_starting_block_fee(&self) -> u64 {

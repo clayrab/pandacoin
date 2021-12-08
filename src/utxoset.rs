@@ -130,12 +130,12 @@ pub struct UtxoSetContext {
 #[derive(Debug)]
 pub struct UtxoSet {
     status_map: DashMap<OutputIdProto, SlipSpentStatus>,
-    context: UtxoSetContext
+    context: UtxoSetContext,
 }
 
 impl UtxoSet {
     /// Create new `UtxoSet`
-    pub fn new(constants: Arc<Constants>,) -> Self {
+    pub fn new(constants: Arc<Constants>) -> Self {
         // we seed the UTXOset with the total IONS and the Seed transasctions in block 1 take from this
         let seed_output_id = OutputIdProto::new([0; 32], 0);
         let seed_output = OutputProto {
@@ -144,15 +144,13 @@ impl UtxoSet {
         };
         let utxoset = UtxoSet {
             status_map: DashMap::new(),
-            context: UtxoSetContext {
-                constants,
-            }
+            context: UtxoSetContext { constants },
         };
-        
-        utxoset.status_map.insert(seed_output_id, SlipSpentStatus::new_on_longest_chain(
-            seed_output,
-            0,
-        ));
+
+        utxoset.status_map.insert(
+            seed_output_id,
+            SlipSpentStatus::new_on_longest_chain(seed_output, 0),
+        );
         utxoset
     }
     /// Used internally in utxoset to determine the status of a output with respect
@@ -506,15 +504,16 @@ impl AbstractUtxoSet for UtxoSet {
 
         let output_amt: u64 = tx.outputs.iter().map(|output| output.amount()).sum();
         // TODO protect this from overflows, this needs to be asserted before computed or something.
-        input_amt - output_amt 
-        
+        input_amt - output_amt
     }
     fn block_fees(&self, block: &Box<dyn RawBlock>) -> u64 {
-        block.get_transactions().iter().map(|tx| {
-            self.transaction_fees(tx)
-        }).reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b ).unwrap()
+        block
+            .get_transactions()
+            .iter()
+            .map(|tx| self.transaction_fees(tx))
+            .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
+            .unwrap()
     }
-
 }
 
 #[cfg(test)]
@@ -991,7 +990,7 @@ mod test {
             Box::new(MockRawBlockForUTXOSet::new(1, [1; 32], block_1_txs));
 
         utxo_set.roll_forward(&mock_block_1);
-      
+
         for block_2_tx in block_2_txs.iter() {
             let fee = utxo_set.transaction_fees(&block_2_tx);
             assert_eq!(1, fee);

@@ -4,16 +4,16 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::Error;
 use crate::blocks_database::BlocksDatabase;
 use crate::constants::Constants;
-use crate::fork_manager::ForkManager;
-use crate::{block::RawBlock, block_fee_manager::BlockFeeManager};
 use crate::crypto::verify_bytes_message;
+use crate::fork_manager::ForkManager;
 use crate::longest_chain_queue::LongestChainQueue;
 use crate::panda_protos::TransactionProto;
 use crate::types::Sha256Hash;
 use crate::utxoset::AbstractUtxoSet;
+use crate::Error;
+use crate::{block::RawBlock, block_fee_manager::BlockFeeManager};
 
 use log::{error, info};
 
@@ -54,7 +54,7 @@ pub struct ForkChains {
 
 #[derive(Debug)]
 struct BlockchainContext {
-    utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,   
+    utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
 }
 
 #[derive(Debug)]
@@ -76,13 +76,13 @@ impl AbstractBlockchain for Blockchain {
     fn latest_block(&self) -> Option<&Box<dyn RawBlock>> {
         //self.blocks_database.block_by_hash(&self.longest_chain_queue.latest_block_hash())
         match self.longest_chain_queue.latest_block_hash() {
-            Some(latest_block_hash) => self.blocks_database.block_by_hash(&latest_block_hash),
+            Some(latest_block_hash) => self.blocks_database.get_block_by_hash(&latest_block_hash),
             None => None,
         }
     }
     /// get a block from the blockchain by hash
     fn get_block_by_hash(&self, block_hash: &Sha256Hash) -> Option<&Box<dyn RawBlock>> {
-        self.blocks_database.block_by_hash(block_hash)
+        self.blocks_database.get_block_by_hash(block_hash)
     }
     /// get a block from the blockchain by id
     fn get_block_by_id(&self, block_id: u32) -> Option<&Box<dyn RawBlock>> {
@@ -117,11 +117,14 @@ impl AbstractBlockchain for Blockchain {
                 let is_new_lc_tip = latest_block_hash == Some(&block.get_previous_block_hash());
                 if is_first_block || is_new_lc_tip {
                     // First Block or we'e new tip of the longest chain
-                    self.fork_manager.roll_forward(&block, &mut self.blocks_database, &self.longest_chain_queue).await;
+                    self.fork_manager
+                        .roll_forward(&block, &mut self.blocks_database, &self.longest_chain_queue)
+                        .await;
                     self.longest_chain_queue.roll_forward(&block.get_hash());
                     let mut utxoset = self.context.utxoset_ref.write().await;
                     utxoset.roll_forward(&block);
-                    self.block_fee_manager.roll_forward(block.get_timestamp(), utxoset.block_fees(&block));
+                    self.block_fee_manager
+                        .roll_forward(block.get_timestamp(), utxoset.block_fees(&block));
                     // OUTPUT_DB_GLOBAL
                     //     .clone()
                     //     .write()
@@ -148,7 +151,7 @@ impl AbstractBlockchain for Blockchain {
                         });
                         for block_hash in fork_chains.old_chain.iter() {
                             let block: &Box<dyn RawBlock> =
-                                self.blocks_database.block_by_hash(block_hash).unwrap();
+                                self.blocks_database.get_block_by_hash(block_hash).unwrap();
                             self.longest_chain_queue.roll_back();
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_back(&block);
@@ -164,11 +167,12 @@ impl AbstractBlockchain for Blockchain {
                         // Wind up the new chain
                         for block_hash in fork_chains.new_chain.iter().rev() {
                             let block: &Box<dyn RawBlock> =
-                                self.blocks_database.block_by_hash(block_hash).unwrap();
+                                self.blocks_database.get_block_by_hash(block_hash).unwrap();
                             self.longest_chain_queue.roll_forward(&block.get_hash());
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_forward(&block);
-                            self.block_fee_manager.roll_forward(block.get_timestamp(), utxoset.block_fees(&block));
+                            self.block_fee_manager
+                                .roll_forward(block.get_timestamp(), utxoset.block_fees(&block));
                             // OUTPUT_DB_GLOBAL
                             //     .clone()
                             //     .write()
@@ -179,7 +183,7 @@ impl AbstractBlockchain for Blockchain {
                         // Wind the old chain as a fork chain
                         for block_hash in fork_chains.old_chain.iter() {
                             let block: &Box<dyn RawBlock> =
-                                self.blocks_database.block_by_hash(block_hash).unwrap();
+                                self.blocks_database.get_block_by_hash(block_hash).unwrap();
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_forward_on_fork(&block);
                             // roll_forward_on_fork
@@ -212,20 +216,18 @@ impl Blockchain {
     pub async fn new(
         genesis_block: Box<dyn RawBlock>,
         utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
-        
     ) -> Self {
         let constants = Arc::new(Constants::new());
         let longest_chain_queue = LongestChainQueue::new(&genesis_block);
         let fork_manager = ForkManager::new(&genesis_block, constants.clone());
-        let block_fee_manager = BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
+        let block_fee_manager =
+            BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
         let blockchain = Blockchain {
             longest_chain_queue: longest_chain_queue,
             blocks_database: BlocksDatabase::new(genesis_block),
             fork_manager: fork_manager,
             block_fee_manager: block_fee_manager,
-            context: BlockchainContext {
-                utxoset_ref
-            },
+            context: BlockchainContext { utxoset_ref },
         };
         // let mut blockchain = Blockchain {
         //     longest_chain_queue: LongestChainQueue::new(),
@@ -236,7 +238,7 @@ impl Blockchain {
         //         utxoset_ref
         //     },
         // };
-        
+
         // let result = blockchain.add_block(genesis_block).await;
         // assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);
         blockchain
@@ -265,7 +267,7 @@ impl Blockchain {
                 new_chain.push(target_block.get_hash().clone());
                 match self
                     .blocks_database
-                    .block_by_hash(&target_block.get_previous_block_hash())
+                    .get_block_by_hash(&target_block.get_previous_block_hash())
                 {
                     Some(previous_block) => target_block = previous_block,
                     None => {
@@ -281,7 +283,7 @@ impl Blockchain {
         // TODO do this in a more rusty way
         while i > target_block.get_id() {
             let hash = self.longest_chain_queue.block_hash_by_id(i).unwrap();
-            let block = self.blocks_database.block_by_hash(&hash).unwrap();
+            let block = self.blocks_database.get_block_by_hash(&hash).unwrap();
             old_chain.push(block.get_hash().clone());
             i = i - 1;
         }
@@ -303,13 +305,16 @@ impl Blockchain {
             return true;
         } else {
             // If the previous block hash doesn't exist in the BlocksDatabase, it's rejected
-            if !self.blocks_database.contains_block_hash(&previous_block_hash) {
+            if !self
+                .blocks_database
+                .contains_block_hash(&previous_block_hash)
+            {
                 info!("invalid block, previous block not found");
                 return false;
             }
             if self
                 .blocks_database
-                .block_by_hash(&previous_block_hash)
+                .get_block_by_hash(&previous_block_hash)
                 .unwrap()
                 .get_id()
                 + 1
@@ -319,13 +324,16 @@ impl Blockchain {
                 return false;
             }
 
-            let previous_block = self.blocks_database.block_by_hash(&previous_block_hash).unwrap();
+            let previous_block = self
+                .blocks_database
+                .get_block_by_hash(&previous_block_hash)
+                .unwrap();
 
             // TODO validate block fee
 
             let utxoset = self.context.utxoset_ref.read().await;
             let _block_fees = utxoset.block_fees(&block);
-            
+
             error!("get_next_fee implement me...");
 
             if previous_block.get_timestamp() >= block.get_timestamp() {
@@ -468,7 +476,7 @@ mod tests {
         let genesis_block = PandaBlock::new_genesis_block(
             keypair.get_public_key().clone(),
             timestamp_generator.get_timestamp(),
-            1
+            1,
         );
         let genesis_block_hash = genesis_block.get_hash().clone();
         let mut blockchain = Blockchain::new(genesis_block, utxoset_ref.clone()).await;
@@ -639,7 +647,7 @@ mod tests {
 
         let result: AddBlockEvent = blockchain.add_block(mock_block_e).await;
         assert_eq!(result, AddBlockEvent::AcceptedAsNewLongestChain);
-    
+
         // teardown().expect("Teardown failed");
     }
 }

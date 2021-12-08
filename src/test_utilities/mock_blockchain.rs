@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-use crate::Error;
 use crate::block::RawBlock;
 use crate::blockchain::{AbstractBlockchain, AddBlockEvent};
 use crate::types::Sha256Hash;
+use crate::Error;
 
 #[derive(Debug)]
 pub struct MockBlockchain {
