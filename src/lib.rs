@@ -1,13 +1,16 @@
 pub mod block;
 pub mod block_fee_manager;
 pub mod blockchain;
+pub mod blocks_database;
 pub mod command_line_opts;
 pub mod constants;
 pub mod crypto;
-pub mod forktree;
+pub mod fork_manager;
 pub mod keypair;
 pub mod keypair_store;
 pub mod longest_chain_queue;
+pub mod mempool;
+pub mod miniblock_manager;
 pub mod output;
 #[path = "proto/out/panda_protos.rs"]
 pub mod panda_protos;

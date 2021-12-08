@@ -1,4 +1,3 @@
-use crate::constants::STARTING_BLOCK_FEE;
 use crate::crypto::hash_bytes;
 use crate::panda_protos::{RawBlockProto, TransactionProto};
 use crate::types::Sha256Hash;
@@ -78,7 +77,7 @@ impl PandaBlock {
         block
     }
 
-    pub fn new_genesis_block(creator: PublicKey, timestamp: u64) -> PandaBlock {
+    pub fn new_genesis_block(creator: PublicKey, timestamp: u64, fee: u64) -> Box<dyn RawBlock> {
         let signature = Signature::from_compact(&[0; 64]).unwrap();
         let block_proto = RawBlockProto {
             id: 0,
@@ -92,10 +91,10 @@ impl PandaBlock {
         let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
         let block = PandaBlock {
             hash: hash,
-            fee: STARTING_BLOCK_FEE,
+            fee: fee,
             block_proto: block_proto,
         };
-        block
+        Box::new(block)
     }
 }
 
@@ -124,13 +123,6 @@ impl RawBlock for PandaBlock {
     fn get_hash(&self) -> &Sha256Hash {
         &self.hash
         //(*self.hash.as_ref()).try_into().unwrap()
-    }
-
-    fn get_block_fee(&self) -> u64 {
-        // For now we just want to panic if block_fee is not set.
-        // I don't think this needs to be properly memoized, but
-        // let's just panic here so we can at least enforce consistency.
-        self.fee
     }
 
     fn get_timestamp(&self) -> u64 {

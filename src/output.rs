@@ -43,6 +43,10 @@ impl OutputProto {
             amount: amount,
         }
     }
+
+    pub fn new2(receiver: Vec<u8>, amount: u64) -> OutputProto {
+        OutputProto { receiver, amount }
+    }
     /// Returns address in `Slip`
     pub fn address(&self) -> &PandaAddress {
         &self.receiver

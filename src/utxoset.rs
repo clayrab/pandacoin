@@ -4,9 +4,11 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIter
 
 use crate::block::RawBlock;
 use crate::blockchain::ForkChains;
+use crate::constants::Constants;
 use crate::panda_protos::{OutputIdProto, OutputProto, TransactionProto};
 use crate::types::Sha256Hash;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use dashmap::DashMap;
 use std::collections::HashMap;
@@ -115,22 +117,41 @@ pub trait AbstractUtxoSet: Debug {
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>>;
     fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto>;
     fn transaction_fees(&self, tx: &TransactionProto) -> u64;
+    fn block_fees(&self, block: &Box<dyn RawBlock>) -> u64;
 }
 
+#[derive(Debug)]
+pub struct UtxoSetContext {
+    constants: Arc<Constants>,
+}
 /// A hashmap storing everything needed to validate the spendability of a output.
 /// This may be optimized in the future, but should be performant enough for the
 /// time being.
 #[derive(Debug)]
 pub struct UtxoSet {
     status_map: DashMap<OutputIdProto, SlipSpentStatus>,
+    context: UtxoSetContext,
 }
 
 impl UtxoSet {
     /// Create new `UtxoSet`
-    pub fn new() -> Self {
-        UtxoSet {
+    pub fn new(constants: Arc<Constants>) -> Self {
+        // we seed the UTXOset with the total IONS and the Seed transasctions in block 1 take from this
+        let seed_output_id = OutputIdProto::new([0; 32], 0);
+        let seed_output = OutputProto {
+            receiver: [0; 32].to_vec(),
+            amount: (constants.get_total_lit() * constants.get_ions_per_lit()) as u64,
+        };
+        let utxoset = UtxoSet {
             status_map: DashMap::new(),
-        }
+            context: UtxoSetContext { constants },
+        };
+
+        utxoset.status_map.insert(
+            seed_output_id,
+            SlipSpentStatus::new_on_longest_chain(seed_output, 0),
+        );
+        utxoset
     }
     /// Used internally in utxoset to determine the status of a output with respect
     /// to the longest chain. This is useful for validating a output on the longest
@@ -418,6 +439,7 @@ impl AbstractUtxoSet for UtxoSet {
         if output_ids.is_empty() {
             None
         } else {
+            // TODO coudlnt' this just be a map().reduce()???
             if let Some(outputs) = output_ids
                 .iter()
                 .map(|input| self.output_status_from_output_id(&input))
@@ -481,8 +503,16 @@ impl AbstractUtxoSet for UtxoSet {
             .sum();
 
         let output_amt: u64 = tx.outputs.iter().map(|output| output.amount()).sum();
-
+        // TODO protect this from overflows, this needs to be asserted before computed or something.
         input_amt - output_amt
+    }
+    fn block_fees(&self, block: &Box<dyn RawBlock>) -> u64 {
+        block
+            .get_transactions()
+            .iter()
+            .map(|tx| self.transaction_fees(tx))
+            .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
+            .unwrap()
     }
 }
 
@@ -502,7 +532,8 @@ mod test {
     async fn roll_forward_and_back_transaction_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
         // object under test:
-        let mut utxo_set = UtxoSet::new();
+        let constants = Arc::new(Constants::new());
+        let mut utxo_set = UtxoSet::new(constants.clone());
         // mock things:
         let keypair = Keypair::new();
         let output_a = OutputProto::new(keypair.get_public_key().clone(), 1);
@@ -546,7 +577,8 @@ mod test {
     async fn roll_forward_and_back_transaction_on_fork_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
         // object under test:
-        let mut utxo_set = UtxoSet::new();
+        let constants = Arc::new(Constants::new());
+        let mut utxo_set = UtxoSet::new(constants.clone());
         // mock things:
         let keypair = Keypair::new();
 
@@ -764,7 +796,8 @@ mod test {
     async fn get_total_for_inputs_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
-        let mut utxo_set = UtxoSet::new();
+        let constants = Arc::new(Constants::new());
+        let mut utxo_set = UtxoSet::new(constants.clone());
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
@@ -798,7 +831,8 @@ mod test {
     async fn get_receiver_for_inputs_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
-        let mut utxo_set = UtxoSet::new();
+        let constants = Arc::new(Constants::new());
+        let mut utxo_set = UtxoSet::new(constants.clone());
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
@@ -836,7 +870,8 @@ mod test {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let keypair2 = Keypair::new();
-        let mut utxo_set = UtxoSet::new();
+        let constants = Arc::new(Constants::new());
+        let mut utxo_set = UtxoSet::new(constants.clone());
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
@@ -871,7 +906,8 @@ mod test {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let keypair2 = Keypair::new();
-        let mut utxo_set = UtxoSet::new();
+        let constants = Arc::new(Constants::new());
+        let mut utxo_set = UtxoSet::new(constants.clone());
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
@@ -910,12 +946,13 @@ mod test {
     async fn transaction_fees_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
-        let mut utxo_set = UtxoSet::new();
+        let constants = Arc::new(Constants::new());
+        let mut utxo_set = UtxoSet::new(constants.clone());
 
-        // make some fake tx and put them into a block
-        let mut spent_txs = vec![];
-        let mut unspent_txs = vec![];
-        //let mut inputs = vec![];
+        // make some fake tx and put them into blocks
+        let mut block_1_txs = vec![];
+        let mut block_2_txs = vec![];
+
         let outputs_for_input = vec![
             OutputProto::new(keypair.get_public_key().clone(), 2),
             OutputProto::new(keypair.get_public_key().clone(), 3),
@@ -930,34 +967,40 @@ mod test {
         ];
 
         for i in 0..4 {
-            let spent_tx = TransactionProto::new(
+            let block_1_tx = TransactionProto::new(
                 vec![],
                 vec![outputs_for_input[i].clone()],
-                TxType::Normal,
+                TxType::Seed,
                 timestamp_generator.get_timestamp(),
                 vec![],
             );
-            let input_for_spent_output = OutputIdProto::new(spent_tx.get_hash(), 0);
-            let unspent_tx = TransactionProto::new(
+            let input_for_spent_output = OutputIdProto::new(block_1_tx.get_hash(), 0);
+            let block_2_tx = TransactionProto::new(
                 vec![input_for_spent_output],
                 vec![outputs[i].clone()],
                 TxType::Normal,
                 timestamp_generator.get_timestamp(),
                 vec![],
             );
-            spent_txs.push(spent_tx);
-            unspent_txs.push(unspent_tx);
+            block_1_txs.push(block_1_tx);
+            block_2_txs.push(block_2_tx);
         }
 
-        let mock_block_a: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForUTXOSet::new(1, [1; 32], spent_txs));
+        let mock_block_1: Box<dyn RawBlock> =
+            Box::new(MockRawBlockForUTXOSet::new(1, [1; 32], block_1_txs));
 
-        // roll the block forward
-        utxo_set.roll_forward(&mock_block_a);
+        utxo_set.roll_forward(&mock_block_1);
 
-        for unspent_tx in unspent_txs.iter() {
-            let fee = utxo_set.transaction_fees(&unspent_tx);
+        for block_2_tx in block_2_txs.iter() {
+            let fee = utxo_set.transaction_fees(&block_2_tx);
             assert_eq!(1, fee);
         }
+
+        let mock_block_2: Box<dyn RawBlock> =
+            Box::new(MockRawBlockForUTXOSet::new(2, [2; 32], block_2_txs));
+
+        utxo_set.roll_forward(&mock_block_2);
+        let total_fee = utxo_set.block_fees(&mock_block_2);
+        assert_eq!(4, total_fee);
     }
 }

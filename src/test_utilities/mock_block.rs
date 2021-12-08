@@ -104,3 +104,22 @@ impl RawBlock for MockRawBlockForBlockchain {
         &self.transactions
     }
 }
+
+/// This Mock RawBlock is used for testing the blockchain Set
+#[derive(Debug)]
+pub struct MockRawBlockForForkManager {
+    transactions: Vec<TransactionProto>,
+}
+impl MockRawBlockForForkManager {
+    pub fn new() -> Self {
+        MockRawBlockForForkManager {
+            transactions: vec![],
+        }
+    }
+}
+
+impl RawBlock for MockRawBlockForForkManager {
+    fn get_transactions(&self) -> &Vec<TransactionProto> {
+        &self.transactions
+    }
+}
