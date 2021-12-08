@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["BLOCK_TIME_TARGET_MS",""],["NUMBER_OF_BLOCKS_FOR_TARGET_CALC",""],["STARTING_BLOCK_FEE",""]]});
+initSidebarItems({"struct":[["Constants",""]]});

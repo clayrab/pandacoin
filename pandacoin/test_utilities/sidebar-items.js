@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["globals_init",""],["mock_block",""],["mock_blockchain",""],["mock_timestamp_generator",""]]});
+initSidebarItems({"mod":[["globals_init",""],["mock_block",""],["mock_blockchain",""],["mock_constants",""],["mock_timestamp_generator",""]]});

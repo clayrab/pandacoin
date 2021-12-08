@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["BlockFeeManager",""]]});
+initSidebarItems({"struct":[["BlockFeeAggregateForkData",""],["BlockFeeManager",""],["BlockFeeManagerContext",""]]});

@@ -8,16 +8,144 @@
 <span id="8"> 8</span>
 <span id="9"> 9</span>
 <span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
 </pre><pre class="rust"><code><span class="comment">// Default block fee for block 1. We simply set this but the actual fees will be 0 because that&#39;s just easier</span>
 <span class="comment">// and a better reflection of reality anyway, although we could in some sense pretend that they are 1 since</span>
 <span class="comment">// the transactions will be seeding the network anyway.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">STARTING_BLOCK_FEE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="kw">const</span> <span class="ident">STARTING_BLOCK_FEE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span>;
+
 <span class="comment">// Number of milliseconds we target to see between blocks.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">BLOCK_TIME_TARGET_MS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">20000</span>;
+<span class="kw">const</span> <span class="ident">BLOCK_TIME_TARGET_MS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">20000</span>;
+
 <span class="comment">// Number of blocks used for adjusting the difficulty. we adjust the difficulty for every block.</span>
 <span class="comment">// We target 15 days which seems long enough that it would be very costly to game but short enough</span>
 <span class="comment">// that the chain can be reasonable flexible over a short period of time.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NUMBER_OF_BLOCKS_FOR_TARGET_CALC</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">15</span> <span class="op">*</span> <span class="number">24</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> (<span class="number">60000</span> <span class="op">/</span> <span class="ident">BLOCK_TIME_TARGET_MS</span>);
+<span class="kw">const</span> <span class="ident">NUMBER_OF_BLOCKS_FOR_TARGET_CALC</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">15</span> <span class="op">*</span> <span class="number">24</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> (<span class="number">60000</span> <span class="op">/</span> <span class="ident">BLOCK_TIME_TARGET_MS</span>);
+
+<span class="comment">// We want 10B total to match the population of earth and we allow as much precision</span>
+<span class="comment">// as will fit nicely into a uint64</span>
+<span class="kw">const</span> <span class="ident">TOTAL_LIT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">10_000_000_000</span>;
+<span class="kw">const</span> <span class="ident">IONS_PER_LIT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1_000_000_000</span>;
+
+<span class="comment">// Amount of blocks beyond which point we will no longer consider forks.</span>
+<span class="comment">// **** For the sake of performance, the PAYMENT_DELAY  period must be greater than or equal to this length! ****</span>
+<span class="kw">const</span> <span class="ident">MAX_REORG</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">24</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> (<span class="number">60000</span> <span class="op">/</span> <span class="ident">BLOCK_TIME_TARGET_MS</span> <span class="kw">as</span> <span class="ident">u32</span>); <span class="comment">// one day</span>
+
+<span class="comment">// This is the amount of time we wait before making payments to Block Producers or Automatic Staking.</span>
+<span class="comment">// Dealing with forking for Automatic Staking would add considerable complexity to validation of forks, therefore</span>
+<span class="comment">// we simply accept that this will be greater than the maximum reorganization length and can gain considerable</span>
+<span class="comment">// compute/memory performance and a simpler implementation.</span>
+<span class="comment">// **** PAYMENT_DELAY must be greater than or equal to MAX_REORG!!!! ****</span>
+<span class="kw">const</span> <span class="ident">PAYMENT_DELAY</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">7</span> <span class="op">*</span> <span class="number">24</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> (<span class="number">60000</span> <span class="op">/</span> <span class="ident">BLOCK_TIME_TARGET_MS</span> <span class="kw">as</span> <span class="ident">u32</span>); <span class="comment">// one week</span>
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Constants</span> {
+    <span class="kw">pub</span> <span class="ident">starting_block_fee</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">block_time_target_ms</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">number_of_blocks_for_target_calc</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">total_lit</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">ions_per_lit</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">max_reorg</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">payment_delay</span>: <span class="ident">u32</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">Constants</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">Constants</span> {
+            <span class="ident">starting_block_fee</span>: <span class="ident">STARTING_BLOCK_FEE</span>,
+            <span class="ident">block_time_target_ms</span>: <span class="ident">BLOCK_TIME_TARGET_MS</span>,
+            <span class="ident">number_of_blocks_for_target_calc</span>: <span class="ident">NUMBER_OF_BLOCKS_FOR_TARGET_CALC</span>,
+            <span class="ident">total_lit</span>: <span class="ident">TOTAL_LIT</span>,
+            <span class="ident">ions_per_lit</span>: <span class="ident">IONS_PER_LIT</span>,
+            <span class="ident">max_reorg</span>: <span class="ident">MAX_REORG</span>,
+            <span class="ident">payment_delay</span>: <span class="ident">PAYMENT_DELAY</span>,
+        }
+    }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_starting_block_fee</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">starting_block_fee</span>
+    }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_block_time_target_ms</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">block_time_target_ms</span>
+    }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_number_of_blocks_for_target_calc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">number_of_blocks_for_target_calc</span>
+    }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_total_lit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">total_lit</span>
+    }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ions_per_lit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">ions_per_lit</span>
+    }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_max_reorg</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
+        <span class="self">self</span>.<span class="ident">max_reorg</span>
+    }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_payment_delay</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
+        <span class="self">self</span>.<span class="ident">payment_delay</span>
+    }
+}
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pandacoin" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
     <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
