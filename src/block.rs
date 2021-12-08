@@ -42,7 +42,7 @@ pub trait RawBlock: Sync + Debug + Send {
 #[derive(Debug)]
 pub struct PandaBlock {
     hash: Sha256Hash,
-    fee: u64, 
+    fee: u64,
     block_proto: RawBlockProto,
 }
 

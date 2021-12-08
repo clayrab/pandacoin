@@ -1,4 +1,4 @@
-use crate::{types::Sha256Hash, block::RawBlock};
+use crate::{block::RawBlock, types::Sha256Hash};
 
 #[derive(Debug, Clone)]
 pub struct LongestChainQueue {

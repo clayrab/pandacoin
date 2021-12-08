@@ -1,12 +1,12 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::{utxoset::AbstractUtxoSet, mempool::AbstractMempool};
+use crate::{mempool::AbstractMempool, utxoset::AbstractUtxoSet};
 
 #[derive(Debug)]
 struct MiniblockManagerContext {
     utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
-    mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>
+    mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
 }
 
 #[derive(Debug)]
@@ -18,11 +18,9 @@ impl MiniblockManager {
     /// Create new `Blockchain`
     pub fn new(
         utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
-        mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>
-        
+        mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
     ) -> Self {
         MiniblockManager {
-            
             context: MiniblockManagerContext {
                 utxoset_ref,
                 mempool_ref,

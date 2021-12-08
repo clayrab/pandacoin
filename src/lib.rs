@@ -1,11 +1,11 @@
 pub mod block;
 pub mod block_fee_manager;
 pub mod blockchain;
+pub mod blocks_database;
 pub mod command_line_opts;
 pub mod constants;
 pub mod crypto;
 pub mod fork_manager;
-pub mod blocks_database;
 pub mod keypair;
 pub mod keypair_store;
 pub mod longest_chain_queue;
