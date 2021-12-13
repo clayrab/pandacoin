@@ -53,7 +53,7 @@
 <span class="doccomment">/// We don&#39;t want to wrap the global TimestampGenerator in a Mutex or RwLock, we prefer to simply</span>
 <span class="doccomment">/// have a global object which can be</span>
 <span class="kw">impl</span> <span class="ident">MockTimestampGenerator</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MockTimestampGenerator</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="ident">MockTimestampGenerator</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mock_timestamp_global</span> <span class="op">=</span> <span class="ident">MOCK_TIMESTAMP</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>();
         <span class="kw-2">*</span><span class="ident">mock_timestamp_global</span> <span class="op">=</span> <span class="ident">SystemTime::now</span>()
             .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
@@ -63,7 +63,7 @@
     }
 }
 <span class="kw">impl</span> <span class="ident">AbstractTimestampGenerator</span> <span class="kw">for</span> <span class="ident">MockTimestampGenerator</span> {
-    <span class="kw">fn</span> <span class="ident">get_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">fn</span> <span class="ident">get_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">timestamp</span> <span class="op">=</span> <span class="ident">MOCK_TIMESTAMP</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
         <span class="kw-2">*</span><span class="ident">timestamp</span>
     }

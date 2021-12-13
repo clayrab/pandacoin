@@ -113,7 +113,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Constants</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">Constants</span> {
             <span class="ident">starting_block_fee</span>: <span class="ident">STARTING_BLOCK_FEE</span>,
             <span class="ident">block_time_target_ms</span>: <span class="ident">BLOCK_TIME_TARGET_MS</span>,
@@ -124,25 +124,25 @@
             <span class="ident">payment_delay</span>: <span class="ident">PAYMENT_DELAY</span>,
         }
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_starting_block_fee</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_starting_block_fee</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">starting_block_fee</span>
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_block_time_target_ms</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_block_time_target_ms</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">block_time_target_ms</span>
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_number_of_blocks_for_target_calc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_number_of_blocks_for_target_calc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">number_of_blocks_for_target_calc</span>
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_total_lit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_total_lit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">total_lit</span>
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ions_per_lit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ions_per_lit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">ions_per_lit</span>
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_max_reorg</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_max_reorg</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
         <span class="self">self</span>.<span class="ident">max_reorg</span>
     }
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_payment_delay</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u32</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_payment_delay</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span> {
         <span class="self">self</span>.<span class="ident">payment_delay</span>
     }
 }

@@ -111,7 +111,23 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">block::RawBlock</span>, <span class="ident">fork_manager::ForkManager</span>, <span class="ident">types::Sha256Hash</span>};
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">block::RawBlock</span>, <span class="ident">fork_manager::ForkManager</span>, <span class="ident">longest_chain_queue::LongestChainQueue</span>,
+    <span class="ident">types::Sha256Hash</span>,
+};
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 
 <span class="doccomment">/// This class is used to store all blocks in a tree structure. We simply use the RawBlock&#39;s previous_block_hash</span>
@@ -128,7 +144,7 @@
     <span class="comment">//         blocks_database: HashMap::new(),</span>
     <span class="comment">//     }</span>
     <span class="comment">// }</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">genesis_block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">genesis_block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">blocks_database</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">genesis_block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>(), <span class="ident">genesis_block</span>);
         <span class="ident">BlocksDatabase</span> {
@@ -141,7 +157,7 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">block_hash</span>: <span class="ident">Sha256Hash</span>,
         <span class="ident">block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">block_hash</span>, <span class="ident">block</span>);
         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">block_hash</span>)
     }
@@ -150,11 +166,11 @@
         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">remove</span>(<span class="ident">block_hash</span>);
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get</span>(<span class="ident">block_hash</span>)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_block_hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">contains_block_hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">contains_key</span>(<span class="ident">block_hash</span>)
     }
 
@@ -162,14 +178,15 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">target_block_id</span>: <span class="ident">u32</span>,
         <span class="ident">starting_search_block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>,
+        <span class="ident">longest_chain_queue</span>: <span class="kw-2">&amp;</span><span class="ident">LongestChainQueue</span>,
         <span class="ident">fork_manager</span>: <span class="kw-2">&amp;</span><span class="ident">ForkManager</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">starting_search_block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">starting_search_block_hash</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">starting_search_block</span>.<span class="ident">get_hash</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">prev_fork_block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span> <span class="op">=</span> <span class="ident">starting_search_block</span>.<span class="ident">get_hash</span>();
         <span class="comment">// loop until we find a block id before the target</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_block_id</span> <span class="op">=</span> <span class="ident">starting_search_block</span>.<span class="ident">get_id</span>();
-        <span class="kw">while</span> <span class="ident">next_block_id</span> <span class="op">&gt;</span> <span class="ident">target_block_id</span> {
+        <span class="kw">while</span> <span class="ident">next_block_id</span> <span class="op">&gt;</span> <span class="ident">target_block_id</span> <span class="op">&amp;&amp;</span> <span class="ident">fork_block_hash</span> <span class="op">!</span><span class="op">=</span> <span class="ident">fork_manager</span>.<span class="ident">get_root</span>() {
             <span class="ident">prev_fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_block_hash</span>;
             <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
                 .<span class="ident">get_previous_ancestor_fork_block_hash</span>(<span class="ident">fork_block_hash</span>)
@@ -179,14 +196,23 @@
                 .<span class="ident">unwrap</span>()
                 .<span class="ident">get_block_id</span>();
         }
-        <span class="comment">// crawl up the parent blocks until we reach the block id we are searching for</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nearest_descendant_block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">prev_fork_block_hash</span>).<span class="ident">unwrap</span>();
-        <span class="kw">while</span> <span class="ident">nearest_descendant_block</span>.<span class="ident">get_id</span>() <span class="op">&gt;</span> <span class="ident">target_block_id</span> {
-            <span class="ident">nearest_descendant_block</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="ident">nearest_descendant_block</span>.<span class="ident">get_previous_block_hash</span>())
+        <span class="kw">if</span> <span class="ident">fork_block_hash</span> <span class="op">==</span> <span class="ident">fork_manager</span>.<span class="ident">get_root</span>() {
+            <span class="comment">// we got to the root, get block from the longest chain</span>
+            <span class="kw">let</span> <span class="ident">block_hash</span> <span class="op">=</span> <span class="ident">longest_chain_queue</span>
+                .<span class="ident">get_block_hash_by_id</span>(<span class="ident">target_block_id</span>)
                 .<span class="ident">unwrap</span>();
+            <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">block_hash</span>).<span class="ident">unwrap</span>())
+        } <span class="kw">else</span> {
+            <span class="comment">// we are still in a fork, crawl up the parent blocks until we reach the block id we are searching for</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nearest_descendant_block</span> <span class="op">=</span>
+                <span class="self">self</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">prev_fork_block_hash</span>).<span class="ident">unwrap</span>();
+            <span class="kw">while</span> <span class="ident">nearest_descendant_block</span>.<span class="ident">get_id</span>() <span class="op">&gt;</span> <span class="ident">target_block_id</span> {
+                <span class="ident">nearest_descendant_block</span> <span class="op">=</span> <span class="self">self</span>
+                    .<span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="ident">nearest_descendant_block</span>.<span class="ident">get_previous_block_hash</span>())
+                    .<span class="ident">unwrap</span>();
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">nearest_descendant_block</span>)
         }
-        <span class="prelude-val">Some</span>(<span class="ident">nearest_descendant_block</span>)
     }
 }
 

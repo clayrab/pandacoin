@@ -31,7 +31,7 @@
     <span class="ident">timestamp_generator::AbstractTimestampGenerator</span>,
 };
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_keypair_store_for_test</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">KeypairStore</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_keypair_store_for_test</span>() -&gt; <span class="ident">KeypairStore</span> {
     <span class="kw">let</span> <span class="ident">command_line_opts</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">CommandLineOpts::parse_from</span>(<span class="kw-2">&amp;</span>[
         <span class="string">&quot;pandacoin&quot;</span>,
         <span class="string">&quot;--password&quot;</span>,
@@ -40,7 +40,7 @@
     <span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>.<span class="ident">clone</span>())
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_timestamp_generator_for_test</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractTimestampGenerator</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_timestamp_generator_for_test</span>() -&gt; <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractTimestampGenerator</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span>
 {
     <span class="ident">Arc::new</span>(<span class="ident">Box::new</span>(<span class="ident">MockTimestampGenerator::new</span>()))
 }

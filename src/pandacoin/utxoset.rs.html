@@ -1074,7 +1074,7 @@
     <span class="doccomment">/// When we create a new SlipSpentStatus, this is because it is the first</span>
     <span class="doccomment">/// time we have seen this output. If this is on the longest chain we can</span>
     <span class="doccomment">/// use this constructor.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_on_longest_chain</span>(<span class="ident">output_status</span>: <span class="ident">OutputProto</span>, <span class="ident">unspent_block_id</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_on_longest_chain</span>(<span class="ident">output_status</span>: <span class="ident">OutputProto</span>, <span class="ident">unspent_block_id</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">SlipSpentStatus</span> {
             <span class="ident">output_status</span>: <span class="ident">output_status</span>,
             <span class="ident">longest_chain_unspent_block_id</span>: <span class="prelude-val">Some</span>(<span class="ident">unspent_block_id</span>),
@@ -1086,7 +1086,7 @@
     <span class="doccomment">/// When we create a new SlipSpentStatus, this is because it is the first</span>
     <span class="doccomment">/// time we have seen this output. If this is in a fork block we can</span>
     <span class="doccomment">/// use this constructor.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_on_fork</span>(<span class="ident">output_status</span>: <span class="ident">OutputProto</span>, <span class="ident">block_hash</span>: <span class="ident">Sha256Hash</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_on_fork</span>(<span class="ident">output_status</span>: <span class="ident">OutputProto</span>, <span class="ident">block_hash</span>: <span class="ident">Sha256Hash</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fork_statuses_map</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span>, <span class="ident">ForkSpentStatus</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
         <span class="ident">fork_statuses_map</span>.<span class="ident">insert</span>(<span class="ident">block_hash</span>, <span class="ident">ForkSpentStatus::ForkUnspent</span>);
         <span class="ident">SlipSpentStatus</span> {
@@ -1113,17 +1113,17 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
         <span class="ident">block_id</span>: <span class="ident">u32</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>;
+    ) -&gt; <span class="ident">bool</span>;
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_in_fork_branch</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
         <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span>;
-    <span class="kw">fn</span> <span class="ident">get_total_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">output_status_from_output_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OutputProto</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">transaction_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tx</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionProto</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span>;
-    <span class="kw">fn</span> <span class="ident">block_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span>;
+    ) -&gt; <span class="ident">bool</span>;
+    <span class="kw">fn</span> <span class="ident">get_total_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">output_status_from_output_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OutputProto</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">transaction_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tx</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionProto</span>) -&gt; <span class="ident">u64</span>;
+    <span class="kw">fn</span> <span class="ident">block_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">u64</span>;
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -1141,7 +1141,7 @@
 
 <span class="kw">impl</span> <span class="ident">UtxoSet</span> {
     <span class="doccomment">/// Create new `UtxoSet`</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">constants</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Constants</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">constants</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Constants</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="comment">// we seed the UTXOset with the total IONS and the Seed transasctions in block 1 take from this</span>
         <span class="kw">let</span> <span class="ident">seed_output_id</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">0</span>; <span class="number">32</span>], <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">seed_output</span> <span class="op">=</span> <span class="ident">OutputProto</span> {
@@ -1168,13 +1168,13 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
         <span class="ident">block_id</span>: <span class="ident">u32</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LongestChainSpentTime</span> {
+    ) -&gt; <span class="ident">LongestChainSpentTime</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">status_map</span>.<span class="ident">get</span>(<span class="ident">output_id</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">status</span>) =&gt; {
                 <span class="kw">match</span> <span class="ident">status</span>.<span class="ident">longest_chain_unspent_block_id</span> {
-                    <span class="prelude-val">Some</span>(<span class="ident">longest_chain_unspent_block_id</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="prelude-val">Some</span>(<span class="ident">longest_chain_unspent_block_id</span>) =&gt; {
                         <span class="kw">match</span> <span class="ident">status</span>.<span class="ident">longest_chain_spent_block_id</span> {
-                            <span class="prelude-val">Some</span>(<span class="ident">longest_chain_spent_block_id</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">Some</span>(<span class="ident">longest_chain_spent_block_id</span>) =&gt; {
                                 <span class="kw">if</span> <span class="ident">longest_chain_unspent_block_id</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">block_id</span>
                                     <span class="op">&amp;&amp;</span> <span class="ident">longest_chain_spent_block_id</span> <span class="op">&gt;</span> <span class="ident">block_id</span>
                                 {
@@ -1189,7 +1189,7 @@
                                     <span class="ident">LongestChainSpentTime::NeverExisted</span>
                                 }
                             }
-                            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="prelude-val">None</span> =&gt; {
                                 <span class="kw">if</span> <span class="ident">longest_chain_unspent_block_id</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">block_id</span> {
                                     <span class="comment">// The output is created/unspent before this block and we don&#39;t have any spent block id</span>
                                     <span class="ident">LongestChainSpentTime::BetweenUnspentAndSpent</span>
@@ -1202,11 +1202,11 @@
                     }
                     <span class="comment">// The output is in the utxoset but it&#39;s unspent_block_id is set to None, it&#39;s been created/unspent but</span>
                     <span class="comment">// then set back to None to indicate that the output hasn&#39;t been created yet</span>
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LongestChainSpentTime::AfterSpentOrNeverExisted</span>,
+                    <span class="prelude-val">None</span> =&gt; <span class="ident">LongestChainSpentTime::AfterSpentOrNeverExisted</span>,
                 }
             }
             <span class="comment">// The output is not in the utxoset, either it was spent and deleted or it never existed</span>
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">LongestChainSpentTime::AfterSpentOrNeverExisted</span>,
+            <span class="prelude-val">None</span> =&gt; <span class="ident">LongestChainSpentTime::AfterSpentOrNeverExisted</span>,
         }
     }
 }
@@ -1370,9 +1370,9 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
         <span class="ident">block_id</span>: <span class="ident">u32</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    ) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">longest_chain_spent_status</span>(<span class="ident">output_id</span>, <span class="ident">block_id</span>);
-        <span class="ident">longest_chain_spent_time</span> <span class="op">=</span><span class="op">=</span> <span class="ident">LongestChainSpentTime::BetweenUnspentAndSpent</span>
+        <span class="ident">longest_chain_spent_time</span> <span class="op">==</span> <span class="ident">LongestChainSpentTime::BetweenUnspentAndSpent</span>
     }
 
     <span class="doccomment">/// Returns true if the output is Unspent(present in the hashmap and marked Unspent before the</span>
@@ -1382,31 +1382,31 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
         <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    ) -&gt; <span class="ident">bool</span> {
         <span class="comment">// first we figure out if the output has been spent at the ancestor block</span>
         <span class="kw">let</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">longest_chain_spent_status</span>(<span class="ident">output_id</span>, <span class="ident">fork_chains</span>.<span class="ident">ancestor_block_id</span>);
-        <span class="kw">if</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span><span class="op">=</span> <span class="ident">LongestChainSpentTime::AfterSpent</span> {
+        <span class="kw">if</span> <span class="ident">longest_chain_spent_time</span> <span class="op">==</span> <span class="ident">LongestChainSpentTime::AfterSpent</span> {
             <span class="kw">return</span> <span class="bool-val">false</span>;
         }
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">return_val</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="kw">if</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span><span class="op">=</span> <span class="ident">LongestChainSpentTime::BetweenUnspentAndSpent</span> {
+        <span class="kw">if</span> <span class="ident">longest_chain_spent_time</span> <span class="op">==</span> <span class="ident">LongestChainSpentTime::BetweenUnspentAndSpent</span> {
             <span class="comment">// if the output hasn&#39;t been spent yet at the ancestor, then we walk the new_chain</span>
             <span class="comment">// and check the fork_statuses</span>
             <span class="comment">// it must not be spent in this fork</span>
             <span class="ident">fork_chains</span>.<span class="ident">new_chain</span>.<span class="ident">iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">block_hash</span><span class="op">|</span> {
                 <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">status_map</span>.<span class="ident">get</span>(<span class="ident">output_id</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">status</span>.<span class="ident">fork_statuses</span>.<span class="ident">get</span>(<span class="ident">block_hash</span>) {
-                        <span class="prelude-val">Some</span>(<span class="ident">fork_spend_status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="kw">if</span> <span class="ident">fork_spend_status</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">ForkSpentStatus::ForkSpent</span> {
+                    <span class="prelude-val">Some</span>(<span class="ident">status</span>) =&gt; <span class="kw">match</span> <span class="ident">status</span>.<span class="ident">fork_statuses</span>.<span class="ident">get</span>(<span class="ident">block_hash</span>) {
+                        <span class="prelude-val">Some</span>(<span class="ident">fork_spend_status</span>) =&gt; {
+                            <span class="kw">if</span> <span class="ident">fork_spend_status</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">ForkSpentStatus::ForkSpent</span> {
                                 <span class="ident">return_val</span> <span class="op">=</span> <span class="bool-val">false</span>;
                             }
                         }
-                        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="prelude-val">None</span> =&gt; {
                             <span class="ident">return_val</span> <span class="op">=</span> <span class="bool-val">true</span>;
                         }
                     },
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="prelude-val">None</span> =&gt; {
                         <span class="ident">return_val</span> <span class="op">=</span> <span class="bool-val">true</span>;
                     }
                 };
@@ -1417,17 +1417,17 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">is_unspent</span> <span class="op">=</span> <span class="bool-val">false</span>;
             <span class="ident">fork_chains</span>.<span class="ident">new_chain</span>.<span class="ident">iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">block_hash</span><span class="op">|</span> {
                 <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">status_map</span>.<span class="ident">get</span>(<span class="ident">output_id</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">status</span>.<span class="ident">fork_statuses</span>.<span class="ident">get</span>(<span class="ident">block_hash</span>) {
-                        <span class="prelude-val">Some</span>(<span class="ident">fork_spend_status</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="kw">if</span> <span class="ident">fork_spend_status</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">ForkSpentStatus::ForkSpent</span> {
+                    <span class="prelude-val">Some</span>(<span class="ident">status</span>) =&gt; <span class="kw">match</span> <span class="ident">status</span>.<span class="ident">fork_statuses</span>.<span class="ident">get</span>(<span class="ident">block_hash</span>) {
+                        <span class="prelude-val">Some</span>(<span class="ident">fork_spend_status</span>) =&gt; {
+                            <span class="kw">if</span> <span class="ident">fork_spend_status</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">ForkSpentStatus::ForkSpent</span> {
                                 <span class="ident">is_spent</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">fork_spend_status</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">ForkSpentStatus::ForkUnspent</span> {
+                            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">fork_spend_status</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">ForkSpentStatus::ForkUnspent</span> {
                                 <span class="ident">is_unspent</span> <span class="op">=</span> <span class="bool-val">true</span>;
                             }
                         }
-                        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {}
+                        <span class="prelude-val">None</span> =&gt; {}
                     },
-                    <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="prelude-val">None</span> =&gt; {
                         <span class="ident">is_unspent</span> <span class="op">=</span> <span class="bool-val">false</span>;
                     }
                 };
@@ -1441,7 +1441,7 @@
     <span class="doccomment">/// that a transaction is balanced.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// If one of the outputs is not valid, the function returns 0</span>
-    <span class="kw">fn</span> <span class="ident">get_total_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_total_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">output_ids</span>.<span class="ident">is_empty</span>() {
             <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
@@ -1462,7 +1462,7 @@
     <span class="doccomment">/// a single address, and, if so, returns that address, otherwise returns None. This is used</span>
     <span class="doccomment">/// to validate that the signer of a transaction is the receiver of all the outputs which</span>
     <span class="doccomment">/// he/she is trying to spend as inputs in a transaction.</span>
-    <span class="kw">fn</span> <span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">output_ids</span>.<span class="ident">is_empty</span>() {
             <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
@@ -1473,7 +1473,7 @@
             {
                 <span class="kw">if</span> <span class="ident">outputs</span>
                     .<span class="ident">iter</span>()
-                    .<span class="ident">all</span>(<span class="op">|</span><span class="ident">output</span><span class="op">|</span> <span class="ident">output</span>.<span class="ident">address</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">outputs</span>[<span class="number">0</span>].<span class="ident">address</span>())
+                    .<span class="ident">all</span>(<span class="op">|</span><span class="ident">output</span><span class="op">|</span> <span class="ident">output</span>.<span class="ident">address</span>() <span class="op">==</span> <span class="ident">outputs</span>[<span class="number">0</span>].<span class="ident">address</span>())
                 {
                     <span class="prelude-val">Some</span>(<span class="ident">outputs</span>[<span class="number">0</span>].<span class="ident">address</span>().<span class="ident">clone</span>())
                 } <span class="kw">else</span> {
@@ -1485,11 +1485,11 @@
         }
     }
     <span class="doccomment">/// This is used to get the Output(`OutputProto`) which corresponds to a given Input(`OutputIdProto`)</span>
-    <span class="kw">fn</span> <span class="ident">output_status_from_output_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OutputProto</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">output_status_from_output_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OutputProto</span><span class="op">&gt;</span> {
         <span class="comment">// TODO get rid of the clone here...?</span>
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">status_map</span>.<span class="ident">get</span>(<span class="ident">output_id</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">output_status</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">output_status</span>.<span class="ident">output_status</span>.<span class="ident">clone</span>()),
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">output_status</span>) =&gt; <span class="prelude-val">Some</span>(<span class="ident">output_status</span>.<span class="ident">output_status</span>.<span class="ident">clone</span>()),
+            <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
         }
     }
     <span class="comment">// pub fn output_status_from_output_id(&amp;self, output_id: &amp;OutputIdProto) -&gt; &amp;OutputProto {</span>
@@ -1501,7 +1501,7 @@
     <span class="comment">// }</span>
 
     <span class="doccomment">/// Computes the fee(leftover of output amount - input amount) for a given unspent transaction.</span>
-    <span class="kw">fn</span> <span class="ident">transaction_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tx</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionProto</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">fn</span> <span class="ident">transaction_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tx</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionProto</span>) -&gt; <span class="ident">u64</span> {
         <span class="kw">let</span> <span class="ident">input_amt</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">tx</span>
             .<span class="ident">inputs</span>
             .<span class="ident">iter</span>()
@@ -1512,7 +1512,7 @@
         <span class="comment">// TODO protect this from overflows, this needs to be asserted before computed or something.</span>
         <span class="ident">input_amt</span> <span class="op">-</span> <span class="ident">output_amt</span>
     }
-    <span class="kw">fn</span> <span class="ident">block_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+    <span class="kw">fn</span> <span class="ident">block_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">u64</span> {
         <span class="ident">block</span>
             .<span class="ident">get_transactions</span>()
             .<span class="ident">iter</span>()
