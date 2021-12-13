@@ -21,7 +21,7 @@ impl OutputIdProto {
     pub fn new(tx_id: Sha256Hash, output_ordinal: u32) -> Self {
         OutputIdProto {
             tx_id: tx_id.to_vec(),
-            output_ordinal: output_ordinal,
+            output_ordinal,
         }
     }
 
@@ -40,7 +40,7 @@ impl OutputProto {
     pub fn new(address: PublicKey, amount: u64) -> OutputProto {
         OutputProto {
             receiver: address.serialize().to_vec(),
-            amount: amount,
+            amount,
         }
     }
 

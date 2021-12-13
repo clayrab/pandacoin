@@ -15,7 +15,7 @@ impl LongestChainQueue {
 
     pub fn new(genesis_block: &Box<dyn RawBlock>) -> Self {
         LongestChainQueue {
-            block_hashes: vec![genesis_block.get_hash().clone()],
+            block_hashes: vec![*genesis_block.get_hash()],
         }
     }
 
@@ -24,7 +24,7 @@ impl LongestChainQueue {
     }
 
     pub fn roll_forward(&mut self, new_block_hash: &Sha256Hash) {
-        self.block_hashes.push(new_block_hash.clone());
+        self.block_hashes.push(*new_block_hash);
     }
 
     pub fn get_block_hash_by_id(&self, id: u32) -> Option<&Sha256Hash> {

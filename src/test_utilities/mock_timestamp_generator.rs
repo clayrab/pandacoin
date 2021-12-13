@@ -32,6 +32,6 @@ impl AbstractTimestampGenerator for MockTimestampGenerator {
     }
     fn advance(&self, time_difference: u64) {
         let mut mock_timestamp_global = MOCK_TIMESTAMP.write().unwrap();
-        *mock_timestamp_global = *mock_timestamp_global + time_difference;
+        *mock_timestamp_global += time_difference;
     }
 }

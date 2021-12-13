@@ -58,7 +58,7 @@ impl KeypairStore {
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
 
         KeypairStore {
-            keypair: keypair,
+            keypair,
             context: KeypairStoreContext { command_line_opts },
         }
     }
@@ -66,10 +66,10 @@ impl KeypairStore {
     pub fn new_mock(command_line_opts: Arc<CommandLineOpts>) -> Self {
         let decrypted_buffer: Vec<u8>;
         decrypted_buffer =
-            KeypairStore::read_key_file(&"data/test/testwallet", &Some(String::from("asdf")));
+            KeypairStore::read_key_file("data/test/testwallet", &Some(String::from("asdf")));
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
         KeypairStore {
-            keypair: keypair,
+            keypair,
             context: KeypairStoreContext { command_line_opts },
         }
     }

@@ -38,7 +38,7 @@ impl AbstractBlockchain for MockBlockchain {
     /// These `AddBlockEvent`s will be turned into network responses so peers can figure out
     /// what's going on.
     async fn add_block(&mut self, block: Box<dyn RawBlock>) -> AddBlockEvent {
-        let hash: Sha256Hash = block.get_hash().clone();
+        let hash: Sha256Hash = *block.get_hash();
         //let hash: Sha256Hash = (*block.get_hash().as_ref().unwrap().clone()).try_into().unwrap();
         self.blocks.insert(hash, block);
         AddBlockEvent::Accepted
