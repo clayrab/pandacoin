@@ -27,7 +27,7 @@ impl LongestChainQueue {
         self.block_hashes.push(new_block_hash.clone());
     }
 
-    pub fn block_hash_by_id(&self, id: u32) -> Option<&Sha256Hash> {
+    pub fn get_block_hash_by_id(&self, id: u32) -> Option<&Sha256Hash> {
         if self.block_hashes.len() >= id as usize {
             Some(&self.block_hashes[id as usize])
         } else {
@@ -48,7 +48,7 @@ impl LongestChainQueue {
     }
 
     pub fn contains_hash_by_block_id(&self, hash: &Sha256Hash, block_id: u32) -> bool {
-        if let Some(block_hash) = self.block_hash_by_id(block_id) {
+        if let Some(block_hash) = self.get_block_hash_by_id(block_id) {
             block_hash == hash
         } else {
             false
