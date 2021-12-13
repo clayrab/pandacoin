@@ -17,11 +17,11 @@ impl TransactionProto {
     ) -> Self {
         let mut tx = TransactionProto {
             hash: None,
-            timestamp: timestamp,
-            inputs: inputs,
-            outputs: outputs,
+            timestamp,
+            inputs,
+            outputs,
             txtype: txtype as i32,
-            message: message,
+            message,
             signature: vec![],
         };
         tx.hash = tx.generate_hash();

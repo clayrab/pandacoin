@@ -33,8 +33,8 @@ impl BlockFeeAggregateForkData {
         block_fees.push_back(block.get_block_fee());
         // TODO use VecDeque::from
         BlockFeeAggregateForkData {
-            timestamps: timestamps,
-            block_fees: block_fees,
+            timestamps,
+            block_fees,
             total_fees: block.get_block_fee(),
         }
     }
@@ -188,7 +188,7 @@ impl BlockFeeManager {
             earliest_block_timestamp = blocks_database
                 .get_block_hash_from_fork_by_id(
                     earliest_block_id,
-                    &last_block.get_hash(),
+                    last_block.get_hash(),
                     longest_chain_queue,
                     fork_manager,
                 )
@@ -196,8 +196,7 @@ impl BlockFeeManager {
                 .get_timestamp();
         }
         if earliest_block_id == 0 {
-            earliest_block_timestamp =
-                earliest_block_timestamp - self.context.constants.get_block_time_target_ms();
+            earliest_block_timestamp -= self.context.constants.get_block_time_target_ms();
         }
         let block_count_diff = 1 + last_block.get_id() - earliest_block_id;
         let time_diff = last_block.get_timestamp() - earliest_block_timestamp;
@@ -216,7 +215,7 @@ impl BlockFeeManager {
                     .unwrap();
             }
 
-            let mut next_parent_hash = last_block.get_hash().clone();
+            let mut next_parent_hash = *last_block.get_hash();
             let mut next_parent_block = blocks_database
                 .get_block_by_hash(last_block.get_hash())
                 .unwrap();
@@ -372,18 +371,18 @@ mod test {
             block_fee_manager
                 .get_next_fee_on_fork(
                     &mock_block,
-                    &fork_manager,
-                    &longest_chain_queue,
-                    &blocks_database
+                    fork_manager,
+                    longest_chain_queue,
+                    blocks_database
                 )
                 .await,
             expected_next_fee
         );
-        longest_chain_queue.roll_forward(&mock_block.get_hash());
+        longest_chain_queue.roll_forward(mock_block.get_hash());
         fork_manager
             .roll_forward(&mock_block, blocks_database, longest_chain_queue)
             .await;
-        blocks_database.insert(mock_block.get_hash().clone(), mock_block);
+        blocks_database.insert(*mock_block.get_hash(), mock_block);
     }
     #[tokio::test]
     async fn block_fee_big_fees_test_new() {
@@ -406,11 +405,11 @@ mod test {
 
         let keypair = Keypair::new();
         let genesis_block = PandaBlock::new_genesis_block(
-            keypair.get_public_key().clone(),
+            *keypair.get_public_key(),
             timestamp_generator.get_timestamp(),
             1,
         );
-        let genesis_block_hash = genesis_block.get_hash().clone();
+        let genesis_block_hash = *genesis_block.get_hash();
         let mut longest_chain_queue = LongestChainQueue::new(&genesis_block);
         let mut fork_manager = ForkManager::new(&genesis_block, constants.clone());
         let mut blocks_database = BlocksDatabase::new(genesis_block);

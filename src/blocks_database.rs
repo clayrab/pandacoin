@@ -20,9 +20,9 @@ impl BlocksDatabase {
     // }
     pub fn new(genesis_block: Box<dyn RawBlock>) -> Self {
         let mut blocks_database = HashMap::new();
-        blocks_database.insert(genesis_block.get_hash().clone(), genesis_block);
+        blocks_database.insert(*genesis_block.get_hash(), genesis_block);
         BlocksDatabase {
-            blocks_database: blocks_database,
+            blocks_database,
         }
     }
 

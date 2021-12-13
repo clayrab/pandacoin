@@ -70,7 +70,7 @@ impl SlipSpentStatus {
     /// use this constructor.
     pub fn new_on_longest_chain(output_status: OutputProto, unspent_block_id: u32) -> Self {
         SlipSpentStatus {
-            output_status: output_status,
+            output_status,
             longest_chain_unspent_block_id: Some(unspent_block_id),
             longest_chain_spent_block_id: None,
             fork_statuses: HashMap::new(),
@@ -84,7 +84,7 @@ impl SlipSpentStatus {
         let mut fork_statuses_map: HashMap<Sha256Hash, ForkSpentStatus> = HashMap::new();
         fork_statuses_map.insert(block_hash, ForkSpentStatus::ForkUnspent);
         SlipSpentStatus {
-            output_status: output_status,
+            output_status,
             longest_chain_unspent_block_id: None,
             longest_chain_spent_block_id: None,
             fork_statuses: fork_statuses_map,
@@ -266,11 +266,11 @@ impl AbstractUtxoSet for UtxoSet {
                     .and_modify(|output_spent_status: &mut SlipSpentStatus| {
                         output_spent_status
                             .fork_statuses
-                            .insert(block.get_hash().clone(), ForkSpentStatus::ForkUnspent);
+                            .insert(*block.get_hash(), ForkSpentStatus::ForkUnspent);
                     })
                     .or_insert(SlipSpentStatus::new_on_fork(
                         output.clone(),
-                        block.get_hash().clone(),
+                        *block.get_hash(),
                     ));
             });
             // loop through inputs and mark them as ForkSpent
@@ -279,7 +279,7 @@ impl AbstractUtxoSet for UtxoSet {
                     |output_spent_status: &mut SlipSpentStatus| {
                         output_spent_status
                             .fork_statuses
-                            .insert(block.get_hash().clone(), ForkSpentStatus::ForkSpent);
+                            .insert(*block.get_hash(), ForkSpentStatus::ForkSpent);
                     },
                 );
             });
@@ -440,15 +440,10 @@ impl AbstractUtxoSet for UtxoSet {
             None
         } else {
             // TODO coudlnt' this just be a map().reduce()???
-            if let Some(outputs) = output_ids
+            output_ids
                 .iter()
-                .map(|input| self.output_status_from_output_id(&input))
-                .collect::<Option<Vec<OutputProto>>>()
-            {
-                Some(outputs.iter().map(|output| output.amount()).sum())
-            } else {
-                None
-            }
+                .map(|input| self.output_status_from_output_id(input))
+                .collect::<Option<Vec<OutputProto>>>().map(|outputs| outputs.iter().map(|output| output.amount()).sum())
         }
     }
 
@@ -459,23 +454,21 @@ impl AbstractUtxoSet for UtxoSet {
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>> {
         if output_ids.is_empty() {
             None
-        } else {
-            if let Some(outputs) = output_ids
+        } else if let Some(outputs) = output_ids
+            .iter()
+            .map(|input| self.output_status_from_output_id(input))
+            .collect::<Option<Vec<OutputProto>>>()
+        {
+            if outputs
                 .iter()
-                .map(|input| self.output_status_from_output_id(input).clone())
-                .collect::<Option<Vec<OutputProto>>>()
+                .all(|output| output.address() == outputs[0].address())
             {
-                if outputs
-                    .iter()
-                    .all(|output| output.address() == outputs[0].address())
-                {
-                    Some(outputs[0].address().clone())
-                } else {
-                    None
-                }
+                Some(outputs[0].address().clone())
             } else {
                 None
             }
+        } else {
+            None
         }
     }
     /// This is used to get the Output(`OutputProto`) which corresponds to a given Input(`OutputIdProto`)
@@ -536,7 +529,7 @@ mod test {
         let mut utxo_set = UtxoSet::new(constants.clone());
         // mock things:
         let keypair = Keypair::new();
-        let output_a = OutputProto::new(keypair.get_public_key().clone(), 1);
+        let output_a = OutputProto::new(*keypair.get_public_key(), 1);
         let tx_a = TransactionProto::new(
             vec![],
             vec![output_a.clone()],
@@ -583,7 +576,7 @@ mod test {
         let keypair = Keypair::new();
 
         // block_a has a single output in it
-        let output_a = OutputProto::new(keypair.get_public_key().clone(), 1);
+        let output_a = OutputProto::new(*keypair.get_public_key(), 1);
         let tx_a = TransactionProto::new(
             vec![],
             vec![output_a],
@@ -596,7 +589,7 @@ mod test {
             Box::new(MockRawBlockForUTXOSet::new(1, [1; 32], vec![tx_a]));
 
         // block_b spends the output in block_a and creates a new output
-        let output_b = OutputProto::new(keypair.get_public_key().clone(), 1);
+        let output_b = OutputProto::new(*keypair.get_public_key(), 1);
         let tx_b = TransactionProto::new(
             vec![output_a_input.clone()],
             vec![output_b],
@@ -609,12 +602,12 @@ mod test {
             Box::new(MockRawBlockForUTXOSet::new(2, [2; 32], vec![tx_b]));
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash().clone(),
+            ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
             new_chain: vec![
-                mock_block_a.get_hash().clone(),
-                mock_block_b.get_hash().clone(),
+                *mock_block_a.get_hash(),
+                *mock_block_b.get_hash(),
             ],
         };
         // ********* roll_forward tx a  *********
@@ -688,12 +681,12 @@ mod test {
         utxo_set.roll_forward_on_fork(&mock_block_a);
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash().clone(),
+            ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
             new_chain: vec![
-                mock_block_a.get_hash().clone(),
-                mock_block_b.get_hash().clone(),
+                *mock_block_a.get_hash(),
+                *mock_block_b.get_hash(),
             ],
         };
         // it should be spendable at block b as a new fork but not spendable at block id 1
@@ -724,12 +717,12 @@ mod test {
         utxo_set.roll_forward_on_fork(&mock_block_b);
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash().clone(),
+            ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
             new_chain: vec![
-                mock_block_a.get_hash().clone(),
-                mock_block_b.get_hash().clone(),
+                *mock_block_a.get_hash(),
+                *mock_block_b.get_hash(),
                 [3; 32],
             ],
         };
@@ -762,12 +755,12 @@ mod test {
         utxo_set.roll_back_on_fork(&mock_block_b);
 
         let fork_chains: ForkChains = ForkChains {
-            ancestor_block_hash: mock_block_a.get_hash().clone(),
+            ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
             new_chain: vec![
-                mock_block_a.get_hash().clone(),
-                mock_block_b.get_hash().clone(),
+                *mock_block_a.get_hash(),
+                *mock_block_b.get_hash(),
             ],
         };
         assert!(
@@ -797,15 +790,15 @@ mod test {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let constants = Arc::new(Constants::new());
-        let mut utxo_set = UtxoSet::new(constants.clone());
+        let mut utxo_set = UtxoSet::new(constants);
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
         let mut inputs = vec![];
         let outputs = vec![
-            OutputProto::new(keypair.get_public_key().clone(), 1),
-            OutputProto::new(keypair.get_public_key().clone(), 2),
-            OutputProto::new(keypair.get_public_key().clone(), 3),
+            OutputProto::new(*keypair.get_public_key(), 1),
+            OutputProto::new(*keypair.get_public_key(), 2),
+            OutputProto::new(*keypair.get_public_key(), 3),
         ];
         outputs.iter().for_each(|output| {
             let tx_a = TransactionProto::new(
@@ -832,15 +825,15 @@ mod test {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let constants = Arc::new(Constants::new());
-        let mut utxo_set = UtxoSet::new(constants.clone());
+        let mut utxo_set = UtxoSet::new(constants);
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
         let mut inputs = vec![];
         let outputs = vec![
-            OutputProto::new(keypair.get_public_key().clone(), 1),
-            OutputProto::new(keypair.get_public_key().clone(), 2),
-            OutputProto::new(keypair.get_public_key().clone(), 3),
+            OutputProto::new(*keypair.get_public_key(), 1),
+            OutputProto::new(*keypair.get_public_key(), 2),
+            OutputProto::new(*keypair.get_public_key(), 3),
         ];
         outputs.iter().for_each(|output| {
             let tx = TransactionProto::new(
@@ -871,16 +864,16 @@ mod test {
         let keypair = Keypair::new();
         let keypair2 = Keypair::new();
         let constants = Arc::new(Constants::new());
-        let mut utxo_set = UtxoSet::new(constants.clone());
+        let mut utxo_set = UtxoSet::new(constants);
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
         let mut inputs = vec![];
         let outputs = vec![
-            OutputProto::new(keypair.get_public_key().clone(), 1),
-            OutputProto::new(keypair.get_public_key().clone(), 2),
-            OutputProto::new(keypair.get_public_key().clone(), 3),
-            OutputProto::new(keypair2.get_public_key().clone(), 4),
+            OutputProto::new(*keypair.get_public_key(), 1),
+            OutputProto::new(*keypair.get_public_key(), 2),
+            OutputProto::new(*keypair.get_public_key(), 3),
+            OutputProto::new(*keypair2.get_public_key(), 4),
         ];
         outputs.iter().for_each(|output| {
             let tx = TransactionProto::new(
@@ -907,16 +900,16 @@ mod test {
         let keypair = Keypair::new();
         let keypair2 = Keypair::new();
         let constants = Arc::new(Constants::new());
-        let mut utxo_set = UtxoSet::new(constants.clone());
+        let mut utxo_set = UtxoSet::new(constants);
 
         // make some fake tx and put them into a block
         let mut txs = vec![];
         let mut inputs = vec![];
         let outputs = vec![
-            OutputProto::new(keypair.get_public_key().clone(), 1),
-            OutputProto::new(keypair.get_public_key().clone(), 2),
-            OutputProto::new(keypair.get_public_key().clone(), 3),
-            OutputProto::new(keypair2.get_public_key().clone(), 4),
+            OutputProto::new(*keypair.get_public_key(), 1),
+            OutputProto::new(*keypair.get_public_key(), 2),
+            OutputProto::new(*keypair.get_public_key(), 3),
+            OutputProto::new(*keypair2.get_public_key(), 4),
         ];
         outputs.iter().for_each(|output| {
             let tx = TransactionProto::new(
@@ -947,23 +940,23 @@ mod test {
         let timestamp_generator = make_timestamp_generator_for_test();
         let keypair = Keypair::new();
         let constants = Arc::new(Constants::new());
-        let mut utxo_set = UtxoSet::new(constants.clone());
+        let mut utxo_set = UtxoSet::new(constants);
 
         // make some fake tx and put them into blocks
         let mut block_1_txs = vec![];
         let mut block_2_txs = vec![];
 
         let outputs_for_input = vec![
-            OutputProto::new(keypair.get_public_key().clone(), 2),
-            OutputProto::new(keypair.get_public_key().clone(), 3),
-            OutputProto::new(keypair.get_public_key().clone(), 4),
-            OutputProto::new(keypair.get_public_key().clone(), 5),
+            OutputProto::new(*keypair.get_public_key(), 2),
+            OutputProto::new(*keypair.get_public_key(), 3),
+            OutputProto::new(*keypair.get_public_key(), 4),
+            OutputProto::new(*keypair.get_public_key(), 5),
         ];
         let outputs = vec![
-            OutputProto::new(keypair.get_public_key().clone(), 1),
-            OutputProto::new(keypair.get_public_key().clone(), 2),
-            OutputProto::new(keypair.get_public_key().clone(), 3),
-            OutputProto::new(keypair.get_public_key().clone(), 4),
+            OutputProto::new(*keypair.get_public_key(), 1),
+            OutputProto::new(*keypair.get_public_key(), 2),
+            OutputProto::new(*keypair.get_public_key(), 3),
+            OutputProto::new(*keypair.get_public_key(), 4),
         ];
 
         for i in 0..4 {
@@ -992,7 +985,7 @@ mod test {
         utxo_set.roll_forward(&mock_block_1);
 
         for block_2_tx in block_2_txs.iter() {
-            let fee = utxo_set.transaction_fees(&block_2_tx);
+            let fee = utxo_set.transaction_fees(block_2_tx);
             assert_eq!(1, fee);
         }
 

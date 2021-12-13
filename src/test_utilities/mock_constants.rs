@@ -17,8 +17,8 @@ impl Constants {
                 .unwrap_or(15 * 24 * 60 * (60000 / 20000)),
             total_lit: total_lit.unwrap_or(10_000_000_000),
             ions_per_lit: ions_per_lit.unwrap_or(1_000_000_000),
-            max_reorg: max_reorg.unwrap_or(24 * 60 * (60000 / 20000 as u32)),
-            payment_delay: payment_delay.unwrap_or(7 * 24 * 60 * (60000 / 20000 as u32)),
+            max_reorg: max_reorg.unwrap_or(24 * 60 * (60000 / 20000_u32)),
+            payment_delay: payment_delay.unwrap_or(7 * 24 * 60 * (60000 / 20000_u32)),
         }
     }
 }
