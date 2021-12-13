@@ -58,7 +58,7 @@ impl PandaBlock {
         // TODO generate a real signature
         // TODO calculate the actual block fee
         let signature = Signature::from_compact(&[0; 64]).unwrap();
-        let block_fee = 0;
+        let block_fee = 1;
         let block_proto = RawBlockProto {
             id,
             timestamp,
@@ -77,7 +77,11 @@ impl PandaBlock {
         block
     }
 
-    pub fn new_genesis_block(creator: PublicKey, timestamp: u64, fee: u64) -> Box<dyn RawBlock> {
+    pub fn new_genesis_block(
+        creator: PublicKey,
+        timestamp: u64,
+        block_fee: u64,
+    ) -> Box<dyn RawBlock> {
         let signature = Signature::from_compact(&[0; 64]).unwrap();
         let block_proto = RawBlockProto {
             id: 0,
@@ -91,7 +95,7 @@ impl PandaBlock {
         let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
         let block = PandaBlock {
             hash: hash,
-            fee: fee,
+            fee: block_fee,
             block_proto: block_proto,
         };
         Box::new(block)
@@ -124,7 +128,9 @@ impl RawBlock for PandaBlock {
         &self.hash
         //(*self.hash.as_ref()).try_into().unwrap()
     }
-
+    fn get_block_fee(&self) -> u64 {
+        self.fee
+    }
     fn get_timestamp(&self) -> u64 {
         self.block_proto.timestamp
     }
@@ -132,10 +138,6 @@ impl RawBlock for PandaBlock {
     fn get_creator(&self) -> PublicKey {
         // TODO Memoize this?
         PublicKey::from_slice(&self.block_proto.creator[..]).unwrap()
-    }
-
-    fn get_transactions(&self) -> &Vec<TransactionProto> {
-        &self.block_proto.transactions
     }
 
     fn get_previous_block_hash(&self) -> Sha256Hash {
@@ -149,6 +151,10 @@ impl RawBlock for PandaBlock {
 
     fn get_id(&self) -> u32 {
         self.block_proto.id
+    }
+
+    fn get_transactions(&self) -> &Vec<TransactionProto> {
+        &self.block_proto.transactions
     }
 }
 

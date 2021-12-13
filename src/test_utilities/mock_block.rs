@@ -3,22 +3,43 @@ use crate::{block::RawBlock, panda_protos::TransactionProto, types::Sha256Hash};
 /// This Mock RawBlock is used for testing Block Fee
 #[derive(Debug)]
 pub struct MockRawBlockForBlockFee {
-    block_fee: u64,
+    mock_block_id: u32,
+    mock_block_fee: u64,
+    mock_block_hash: Sha256Hash,
+    mock_parent_hash: Sha256Hash,
     timestamp: u64,
     transactions: Vec<TransactionProto>,
 }
 impl MockRawBlockForBlockFee {
-    pub fn new(block_fee: u64, timestamp: u64) -> Self {
+    pub fn new(
+        mock_block_id: u32,
+        mock_block_fee: u64,
+        mock_block_hash: Sha256Hash,
+        mock_parent_hash: Sha256Hash,
+        timestamp: u64,
+    ) -> Self {
         MockRawBlockForBlockFee {
-            block_fee,
+            mock_block_id,
+            mock_block_fee,
+            mock_block_hash,
+            mock_parent_hash,
             timestamp,
             transactions: vec![],
         }
     }
 }
 impl RawBlock for MockRawBlockForBlockFee {
+    fn get_id(&self) -> u32 {
+        self.mock_block_id
+    }
     fn get_block_fee(&self) -> u64 {
-        self.block_fee
+        self.mock_block_fee
+    }
+    fn get_hash(&self) -> &Sha256Hash {
+        &self.mock_block_hash
+    }
+    fn get_previous_block_hash(&self) -> Sha256Hash {
+        self.mock_parent_hash
     }
     fn get_timestamp(&self) -> u64 {
         self.timestamp

@@ -86,7 +86,7 @@ impl AbstractBlockchain for Blockchain {
     }
     /// get a block from the blockchain by id
     fn get_block_by_id(&self, block_id: u32) -> Option<&Box<dyn RawBlock>> {
-        let block_hash = self.longest_chain_queue.block_hash_by_id(block_id)?;
+        let block_hash = self.longest_chain_queue.get_block_hash_by_id(block_id)?;
         self.get_block_by_hash(block_hash)
     }
     /// remove blocks that are in fork branches and have become too old(beyond MAX_REORG)
@@ -123,8 +123,8 @@ impl AbstractBlockchain for Blockchain {
                     self.longest_chain_queue.roll_forward(&block.get_hash());
                     let mut utxoset = self.context.utxoset_ref.write().await;
                     utxoset.roll_forward(&block);
-                    self.block_fee_manager
-                        .roll_forward(block.get_timestamp(), utxoset.block_fees(&block));
+                    // self.block_fee_manager
+                    //     .roll_forward(&self.blocks_database.get_block_by_hash(self.fork_manager.get_root()).unwrap());
                     // OUTPUT_DB_GLOBAL
                     //     .clone()
                     //     .write()
@@ -171,8 +171,8 @@ impl AbstractBlockchain for Blockchain {
                             self.longest_chain_queue.roll_forward(&block.get_hash());
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_forward(&block);
-                            self.block_fee_manager
-                                .roll_forward(block.get_timestamp(), utxoset.block_fees(&block));
+                            // self.block_fee_manager
+                            //     .roll_forward(&self.blocks_database.get_block_by_hash(self.fork_manager.get_root()).unwrap());
                             // OUTPUT_DB_GLOBAL
                             //     .clone()
                             //     .write()
@@ -282,7 +282,7 @@ impl Blockchain {
         let mut i: u32 = self.longest_chain_queue.latest_block_id();
         // TODO do this in a more rusty way
         while i > target_block.get_id() {
-            let hash = self.longest_chain_queue.block_hash_by_id(i).unwrap();
+            let hash = self.longest_chain_queue.get_block_hash_by_id(i).unwrap();
             let block = self.blocks_database.get_block_by_hash(&hash).unwrap();
             old_chain.push(block.get_hash().clone());
             i = i - 1;
