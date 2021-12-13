@@ -69,12 +69,12 @@ impl PandaBlock {
             transactions: vec![],
         };
         let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
-        let block = PandaBlock {
-            hash: hash,
+        
+        PandaBlock {
+            hash,
             fee: block_fee,
-            block_proto: block_proto,
-        };
-        block
+            block_proto,
+        }
     }
 
     pub fn new_genesis_block(
@@ -94,9 +94,9 @@ impl PandaBlock {
         };
         let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
         let block = PandaBlock {
-            hash: hash,
+            hash,
             fee: block_fee,
-            block_proto: block_proto,
+            block_proto,
         };
         Box::new(block)
     }
@@ -173,14 +173,14 @@ mod test {
         let timestamp_generator = make_timestamp_generator_for_test();
         let block1 = PandaBlock::new(
             0,
-            keypair_store.get_keypair().get_public_key().clone(),
+            *keypair_store.get_keypair().get_public_key(),
             timestamp_generator.get_timestamp(),
             [0; 32],
         );
         timestamp_generator.advance(111);
         let block2 = PandaBlock::new(
             0,
-            keypair_store.get_keypair().get_public_key().clone(),
+            *keypair_store.get_keypair().get_public_key(),
             timestamp_generator.get_timestamp(),
             [0; 32],
         );

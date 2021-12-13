@@ -14,7 +14,7 @@ pub fn make_keypair_store_for_test() -> KeypairStore {
         "--password",
         "asdf",
     ]));
-    KeypairStore::new_mock(command_line_opts.clone())
+    KeypairStore::new_mock(command_line_opts)
 }
 
 pub fn make_timestamp_generator_for_test() -> Arc<Box<dyn AbstractTimestampGenerator + Send + Sync>>

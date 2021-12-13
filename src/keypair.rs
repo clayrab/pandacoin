@@ -24,19 +24,19 @@ impl Keypair {
         }
 
         Keypair {
-            secret_key: secret_key,
-            public_key: public_key,
+            secret_key,
+            public_key,
         }
     }
 
     /// Create and return a keypair with  the given hex u8 array as the private key
     pub fn from_secret_slice(slice: &[u8]) -> Result<Keypair, secp256k1::Error> {
         let secret_key = SecretKey::from_slice(slice)?;
-        let public_key = PublicKey::from_secret_key(&SECP256K1, &secret_key);
+        let public_key = PublicKey::from_secret_key(SECP256K1, &secret_key);
 
         Ok(Keypair {
-            secret_key: secret_key,
-            public_key: public_key,
+            secret_key,
+            public_key,
         })
     }
 
