@@ -37,7 +37,7 @@
         <span class="string">&quot;--password&quot;</span>,
         <span class="string">&quot;asdf&quot;</span>,
     ]));
-    <span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>.<span class="ident">clone</span>())
+    <span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>)
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_timestamp_generator_for_test</span>() -&gt; <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractTimestampGenerator</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span>

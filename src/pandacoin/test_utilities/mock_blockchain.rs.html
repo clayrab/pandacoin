@@ -88,7 +88,7 @@
     <span class="doccomment">/// These `AddBlockEvent`s will be turned into network responses so peers can figure out</span>
     <span class="doccomment">/// what&#39;s going on.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">AddBlockEvent</span> {
-        <span class="kw">let</span> <span class="ident">hash</span>: <span class="ident">Sha256Hash</span> <span class="op">=</span> <span class="ident">block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">hash</span>: <span class="ident">Sha256Hash</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">block</span>.<span class="ident">get_hash</span>();
         <span class="comment">//let hash: Sha256Hash = (*block.get_hash().as_ref().unwrap().clone()).try_into().unwrap();</span>
         <span class="self">self</span>.<span class="ident">blocks</span>.<span class="ident">insert</span>(<span class="ident">hash</span>, <span class="ident">block</span>);
         <span class="ident">AddBlockEvent::Accepted</span>

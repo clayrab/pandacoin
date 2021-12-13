@@ -80,7 +80,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">tx_id</span>: <span class="ident">Sha256Hash</span>, <span class="ident">output_ordinal</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">OutputIdProto</span> {
             <span class="ident">tx_id</span>: <span class="ident">tx_id</span>.<span class="ident">to_vec</span>(),
-            <span class="ident">output_ordinal</span>: <span class="ident">output_ordinal</span>,
+            <span class="ident">output_ordinal</span>,
         }
     }
 
@@ -99,7 +99,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">address</span>: <span class="ident">PublicKey</span>, <span class="ident">amount</span>: <span class="ident">u64</span>) -&gt; <span class="ident">OutputProto</span> {
         <span class="ident">OutputProto</span> {
             <span class="ident">receiver</span>: <span class="ident">address</span>.<span class="ident">serialize</span>().<span class="ident">to_vec</span>(),
-            <span class="ident">amount</span>: <span class="ident">amount</span>,
+            <span class="ident">amount</span>,
         }
     }
 

@@ -729,7 +729,7 @@
     <span class="kw">fn</span> <span class="ident">latest_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="comment">//self.blocks_database.block_by_hash(&amp;self.longest_chain_queue.latest_block_hash())</span>
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">latest_block_hash</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">latest_block_hash</span>) =&gt; <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="ident">latest_block_hash</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">latest_block_hash</span>) =&gt; <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">latest_block_hash</span>),
             <span class="prelude-val">None</span> =&gt; <span class="prelude-val">None</span>,
         }
     }
@@ -757,7 +757,7 @@
         <span class="comment">// TODO: Should we pass a serialized block [u8] to add_block instead of a Block?</span>
         <span class="kw">let</span> <span class="ident">is_first_block</span> <span class="op">=</span> <span class="ident">block</span>.<span class="ident">get_previous_block_hash</span>() <span class="op">==</span> [<span class="number">0u8</span>; <span class="number">32</span>]
             <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">contains_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>.<span class="ident">get_previous_block_hash</span>());
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">contains_block_hash</span>(<span class="kw-2">&amp;</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>())) {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">contains_block_hash</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>()) {
             <span class="ident">AddBlockEvent::AlreadyKnown</span>
         } <span class="kw">else</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">is_first_block</span> <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">contains_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>.<span class="ident">get_previous_block_hash</span>()) {
             <span class="ident">AddBlockEvent::ParentNotFound</span>
@@ -773,7 +773,7 @@
                     <span class="self">self</span>.<span class="ident">fork_manager</span>
                         .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">longest_chain_queue</span>)
                         .<span class="kw">await</span>;
-                    <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>.<span class="ident">get_hash</span>());
+                    <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>());
                     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
                     <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
                     <span class="comment">// self.block_fee_manager</span>
@@ -786,7 +786,7 @@
 
                     <span class="kw">let</span> <span class="ident">_stored_block</span> <span class="op">=</span> <span class="self">self</span>
                         .<span class="ident">blocks_database</span>
-                        .<span class="ident">insert</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>(), <span class="ident">block</span>)
+                        .<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">block</span>.<span class="ident">get_hash</span>(), <span class="ident">block</span>)
                         .<span class="ident">unwrap</span>();
 
                     <span class="comment">// self.storage.roll_forward(&amp;block).await;</span>
@@ -796,7 +796,7 @@
                     <span class="comment">// We are not on the longest chain</span>
                     <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_longer_chain</span>(<span class="kw-2">&amp;</span><span class="ident">fork_chains</span>.<span class="ident">new_chain</span>, <span class="kw-2">&amp;</span><span class="ident">fork_chains</span>.<span class="ident">old_chain</span>) {
                         <span class="self">self</span>.<span class="ident">blocks_database</span>
-                            .<span class="ident">insert</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>(), <span class="ident">block</span>)
+                            .<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">block</span>.<span class="ident">get_hash</span>(), <span class="ident">block</span>)
                             .<span class="ident">unwrap</span>();
                         <span class="comment">// Unwind the old chain</span>
                         <span class="kw">let</span> <span class="ident">_result</span> <span class="op">=</span> <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">_hash</span><span class="op">|</span> {
@@ -807,7 +807,7 @@
                                 <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">block_hash</span>).<span class="ident">unwrap</span>();
                             <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_back</span>();
                             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                            <span class="ident">utxoset</span>.<span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+                            <span class="ident">utxoset</span>.<span class="ident">roll_back</span>(<span class="ident">block</span>);
                             <span class="self">self</span>.<span class="ident">block_fee_manager</span>.<span class="ident">roll_back</span>();
                             <span class="comment">// OUTPUT_DB_GLOBAL</span>
                             <span class="comment">//     .clone()</span>
@@ -821,9 +821,9 @@
                         <span class="kw">for</span> <span class="ident">block_hash</span> <span class="kw">in</span> <span class="ident">fork_chains</span>.<span class="ident">new_chain</span>.<span class="ident">iter</span>().<span class="ident">rev</span>() {
                             <span class="kw">let</span> <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span>
                                 <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">block_hash</span>).<span class="ident">unwrap</span>();
-                            <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>.<span class="ident">get_hash</span>());
+                            <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>());
                             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                            <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+                            <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>);
                             <span class="comment">// self.block_fee_manager</span>
                             <span class="comment">//     .roll_forward(&amp;self.blocks_database.get_block_by_hash(self.fork_manager.get_root()).unwrap());</span>
                             <span class="comment">// OUTPUT_DB_GLOBAL</span>
@@ -838,7 +838,7 @@
                             <span class="kw">let</span> <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span>
                                 <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">block_hash</span>).<span class="ident">unwrap</span>();
                             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                            <span class="ident">utxoset</span>.<span class="ident">roll_forward_on_fork</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+                            <span class="ident">utxoset</span>.<span class="ident">roll_forward_on_fork</span>(<span class="ident">block</span>);
                             <span class="comment">// roll_forward_on_fork</span>
                             <span class="comment">//     .clone()</span>
                             <span class="comment">//     .write()</span>
@@ -854,7 +854,7 @@
                         <span class="ident">utxoset</span>.<span class="ident">roll_forward_on_fork</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
 
                         <span class="self">self</span>.<span class="ident">blocks_database</span>
-                            .<span class="ident">insert</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>(), <span class="ident">block</span>)
+                            .<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">block</span>.<span class="ident">get_hash</span>(), <span class="ident">block</span>)
                             .<span class="ident">unwrap</span>();
                         <span class="ident">AddBlockEvent::Accepted</span>
                     }
@@ -874,14 +874,8 @@
         <span class="kw">let</span> <span class="ident">longest_chain_queue</span> <span class="op">=</span> <span class="ident">LongestChainQueue::new</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_block</span>);
         <span class="kw">let</span> <span class="ident">fork_manager</span> <span class="op">=</span> <span class="ident">ForkManager::new</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_block</span>, <span class="ident">constants</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">block_fee_manager</span> <span class="op">=</span>
-            <span class="ident">BlockFeeManager::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>(), <span class="ident">genesis_block</span>.<span class="ident">get_timestamp</span>());
-        <span class="kw">let</span> <span class="ident">blockchain</span> <span class="op">=</span> <span class="ident">Blockchain</span> {
-            <span class="ident">longest_chain_queue</span>: <span class="ident">longest_chain_queue</span>,
-            <span class="ident">blocks_database</span>: <span class="ident">BlocksDatabase::new</span>(<span class="ident">genesis_block</span>),
-            <span class="ident">fork_manager</span>: <span class="ident">fork_manager</span>,
-            <span class="ident">block_fee_manager</span>: <span class="ident">block_fee_manager</span>,
-            <span class="ident">context</span>: <span class="ident">BlockchainContext</span> { <span class="ident">utxoset_ref</span> },
-        };
+            <span class="ident">BlockFeeManager::new</span>(<span class="ident">constants</span>, <span class="ident">genesis_block</span>.<span class="ident">get_timestamp</span>());
+        
         <span class="comment">// let mut blockchain = Blockchain {</span>
         <span class="comment">//     longest_chain_queue: LongestChainQueue::new(),</span>
         <span class="comment">//     blocks_database: BlocksDatabase::new(),</span>
@@ -894,7 +888,13 @@
 
         <span class="comment">// let result = blockchain.add_block(genesis_block).await;</span>
         <span class="comment">// assert_eq!(result, AddBlockEvent::AcceptedAsLongestChain);</span>
-        <span class="ident">blockchain</span>
+        <span class="ident">Blockchain</span> {
+            <span class="ident">longest_chain_queue</span>,
+            <span class="ident">blocks_database</span>: <span class="ident">BlocksDatabase::new</span>(<span class="ident">genesis_block</span>),
+            <span class="ident">fork_manager</span>,
+            <span class="ident">block_fee_manager</span>,
+            <span class="ident">context</span>: <span class="ident">BlockchainContext</span> { <span class="ident">utxoset_ref</span> },
+        }
     }
 
     <span class="doccomment">/// If the block is in the fork</span>
@@ -913,11 +913,11 @@
             <span class="kw">if</span> <span class="ident">target_block</span>.<span class="ident">get_id</span>() <span class="op">==</span> <span class="number">1</span>
                 <span class="op">|</span><span class="op">|</span> <span class="self">self</span>
                     .<span class="ident">longest_chain_queue</span>
-                    .<span class="ident">contains_hash_by_block_id</span>(<span class="kw-2">&amp;</span><span class="ident">target_block</span>.<span class="ident">get_hash</span>(), <span class="ident">target_block</span>.<span class="ident">get_id</span>())
+                    .<span class="ident">contains_hash_by_block_id</span>(<span class="ident">target_block</span>.<span class="ident">get_hash</span>(), <span class="ident">target_block</span>.<span class="ident">get_id</span>())
             {
                 <span class="ident">search_completed</span> <span class="op">=</span> <span class="bool-val">true</span>;
             } <span class="kw">else</span> {
-                <span class="ident">new_chain</span>.<span class="ident">push</span>(<span class="ident">target_block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>());
+                <span class="ident">new_chain</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">target_block</span>.<span class="ident">get_hash</span>());
                 <span class="kw">match</span> <span class="self">self</span>
                     .<span class="ident">blocks_database</span>
                     .<span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="ident">target_block</span>.<span class="ident">get_previous_block_hash</span>())
@@ -936,15 +936,15 @@
         <span class="comment">// TODO do this in a more rusty way</span>
         <span class="kw">while</span> <span class="ident">i</span> <span class="op">&gt;</span> <span class="ident">target_block</span>.<span class="ident">get_id</span>() {
             <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">get_block_hash_by_id</span>(<span class="ident">i</span>).<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="ident">hash</span>).<span class="ident">unwrap</span>();
-            <span class="ident">old_chain</span>.<span class="ident">push</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>());
-            <span class="ident">i</span> <span class="op">=</span> <span class="ident">i</span> <span class="op">-</span> <span class="number">1</span>;
+            <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">hash</span>).<span class="ident">unwrap</span>();
+            <span class="ident">old_chain</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">block</span>.<span class="ident">get_hash</span>());
+            <span class="ident">i</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
         }
         <span class="ident">ForkChains</span> {
-            <span class="ident">ancestor_block_hash</span>: <span class="ident">target_block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>(),
+            <span class="ident">ancestor_block_hash</span>: <span class="kw-2">*</span><span class="ident">target_block</span>.<span class="ident">get_hash</span>(),
             <span class="ident">ancestor_block_id</span>: <span class="ident">target_block</span>.<span class="ident">get_id</span>(),
-            <span class="ident">old_chain</span>: <span class="ident">old_chain</span>,
-            <span class="ident">new_chain</span>: <span class="ident">new_chain</span>,
+            <span class="ident">old_chain</span>,
+            <span class="ident">new_chain</span>,
         }
     }
 
@@ -955,7 +955,7 @@
             <span class="comment">// if block.burnfee() != DEFAULT_BURN_FEE {</span>
             <span class="comment">//     return false;</span>
             <span class="comment">// }</span>
-            <span class="kw">return</span> <span class="bool-val">true</span>;
+            <span class="bool-val">true</span>
         } <span class="kw">else</span> {
             <span class="comment">// If the previous block hash doesn&#39;t exist in the BlocksDatabase, it&#39;s rejected</span>
             <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>
@@ -985,7 +985,7 @@
             <span class="comment">// TODO validate block fee</span>
 
             <span class="kw">let</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">read</span>().<span class="kw">await</span>;
-            <span class="kw">let</span> <span class="ident">_block_fees</span> <span class="op">=</span> <span class="ident">utxoset</span>.<span class="ident">block_fees</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+            <span class="kw">let</span> <span class="ident">_block_fees</span> <span class="op">=</span> <span class="ident">utxoset</span>.<span class="ident">block_fees</span>(<span class="ident">block</span>);
 
             <span class="macro">error!</span>(<span class="string">&quot;get_next_fee implement me...&quot;</span>);
 
@@ -1011,12 +1011,12 @@
         <span class="kw">match</span> <span class="ident">tx</span>.<span class="ident">txtype</span> {
             <span class="comment">//TxType::Normal =&gt; {</span>
             <span class="number">0</span> =&gt; {
-                <span class="kw">if</span> <span class="ident">tx</span>.<span class="ident">inputs</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">0</span> <span class="op">&amp;&amp;</span> <span class="ident">tx</span>.<span class="ident">outputs</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">0</span> {
+                <span class="kw">if</span> <span class="ident">tx</span>.<span class="ident">inputs</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="ident">tx</span>.<span class="ident">outputs</span>.<span class="ident">is_empty</span>() {
                     <span class="kw">return</span> <span class="bool-val">true</span>;
                 }
                 <span class="kw">let</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">read</span>().<span class="kw">await</span>;
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">address</span>) <span class="op">=</span> <span class="ident">utxoset</span>.<span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="ident">tx</span>.<span class="ident">inputs</span>) {
-                    <span class="kw">if</span> <span class="op">!</span><span class="ident">verify_bytes_message</span>(<span class="kw-2">&amp;</span><span class="ident">tx</span>.<span class="ident">hash</span>(), <span class="ident">tx</span>.<span class="ident">signature</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">address</span>) {
+                    <span class="kw">if</span> <span class="op">!</span><span class="ident">verify_bytes_message</span>(<span class="ident">tx</span>.<span class="ident">hash</span>(), <span class="ident">tx</span>.<span class="ident">signature</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">address</span>) {
                         <span class="macro">info!</span>(<span class="string">&quot;tx signature invalid&quot;</span>);
                         <span class="kw">return</span> <span class="bool-val">false</span>;
                     };
@@ -1026,7 +1026,7 @@
                     <span class="kw">let</span> <span class="ident">inputs_iterator_stream</span> <span class="op">=</span> <span class="ident">futures::stream::iter</span>(<span class="kw-2">&amp;</span><span class="ident">tx</span>.<span class="ident">inputs</span>);
                     <span class="kw">let</span> <span class="ident">inputs_are_valid</span> <span class="op">=</span> <span class="ident">inputs_iterator_stream</span>
                         .<span class="ident">all</span>(<span class="op">|</span><span class="ident">input</span><span class="op">|</span> {
-                            <span class="kw">if</span> <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">0</span> {
+                            <span class="kw">if</span> <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">is_empty</span>() {
                                 <span class="macro">info!</span>(<span class="string">&quot;is_output_spendable_at_block_id&quot;</span>);
                                 <span class="ident">utxoset</span>
                                     .<span class="ident">is_output_spendable_at_block_id</span>(<span class="ident">input</span>, <span class="ident">previous_block</span>.<span class="ident">get_id</span>())
@@ -1127,11 +1127,11 @@
 
         <span class="comment">// object under test</span>
         <span class="kw">let</span> <span class="ident">genesis_block</span> <span class="op">=</span> <span class="ident">PandaBlock::new_genesis_block</span>(
-            <span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(),
+            <span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(),
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="number">1</span>,
         );
-        <span class="kw">let</span> <span class="ident">genesis_block_hash</span> <span class="op">=</span> <span class="ident">genesis_block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">genesis_block_hash</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">blockchain</span> <span class="op">=</span> <span class="ident">Blockchain::new</span>(<span class="ident">genesis_block</span>, <span class="ident">utxoset_ref</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
 
         <span class="comment">//</span>
@@ -1145,7 +1145,7 @@
         <span class="comment">// a -&gt; b -&gt; c -&gt; c2 -&gt; d2 -&gt; d -&gt; e</span>
 
         <span class="comment">// block_a has a single output in it</span>
-        <span class="kw">let</span> <span class="ident">output_a</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let</span> <span class="ident">output_a</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
         <span class="kw">let</span> <span class="ident">seed_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">0</span>; <span class="number">32</span>], <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">tx_a</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
             <span class="macro">vec!</span>[<span class="ident">seed_input</span>],
@@ -1165,7 +1165,7 @@
 
         <span class="comment">// block_b spends the output in block_a and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
-        <span class="kw">let</span> <span class="ident">output_b</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let</span> <span class="ident">output_b</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
         <span class="kw">let</span> <span class="ident">tx_b</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
             <span class="macro">vec!</span>[<span class="ident">output_a_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_b</span>],
@@ -1184,7 +1184,7 @@
 
         <span class="comment">// block_c spends the output in block_b and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
-        <span class="kw">let</span> <span class="ident">output_c</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let</span> <span class="ident">output_c</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
         <span class="kw">let</span> <span class="ident">tx_c</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
             <span class="macro">vec!</span>[<span class="ident">output_b_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_c</span>],
@@ -1203,8 +1203,8 @@
 
         <span class="comment">// block_c_2 spends the output in block_b and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">output_c_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">output_c_2_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">output_c_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">output_c_2_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">tx_c_2</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
             <span class="macro">vec!</span>[<span class="ident">output_b_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_c_2</span>, <span class="ident">output_c_2_2</span>],
@@ -1223,7 +1223,7 @@
 
         <span class="comment">// block_d spends the output in block_c and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
-        <span class="kw">let</span> <span class="ident">output_d</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let</span> <span class="ident">output_d</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
         <span class="kw">let</span> <span class="ident">tx_d</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
             <span class="macro">vec!</span>[<span class="ident">output_c_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_d</span>],
@@ -1242,7 +1242,7 @@
 
         <span class="comment">// block_d_2 spends the output in block_c and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
-        <span class="kw">let</span> <span class="ident">output_d_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">output_d_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">tx_d_2</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
             <span class="macro">vec!</span>[<span class="ident">output_c_2_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_d_2</span>],
@@ -1261,7 +1261,7 @@
 
         <span class="comment">// block_e spends the output in block_d and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
-        <span class="kw">let</span> <span class="ident">output_e</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="ident">keypair</span>.<span class="ident">get_public_key</span>().<span class="ident">clone</span>(), <span class="number">2</span>);
+        <span class="kw">let</span> <span class="ident">output_e</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
         <span class="kw">let</span> <span class="ident">tx_e</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
             <span class="macro">vec!</span>[<span class="ident">output_d_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_e</span>],
