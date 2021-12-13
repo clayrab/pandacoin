@@ -1,4 +1,7 @@
-use crate::{block::RawBlock, fork_manager::ForkManager, types::Sha256Hash};
+use crate::{
+    block::RawBlock, fork_manager::ForkManager, longest_chain_queue::LongestChainQueue,
+    types::Sha256Hash,
+};
 use std::collections::HashMap;
 
 /// This class is used to store all blocks in a tree structure. We simply use the RawBlock's previous_block_hash
@@ -49,6 +52,7 @@ impl BlocksDatabase {
         &self,
         target_block_id: u32,
         starting_search_block_hash: &Sha256Hash,
+        longest_chain_queue: &LongestChainQueue,
         fork_manager: &ForkManager,
     ) -> Option<&Box<dyn RawBlock>> {
         let starting_search_block = self.get_block_by_hash(starting_search_block_hash).unwrap();
@@ -56,7 +60,7 @@ impl BlocksDatabase {
         let mut prev_fork_block_hash: &Sha256Hash = starting_search_block.get_hash();
         // loop until we find a block id before the target
         let mut next_block_id = starting_search_block.get_id();
-        while next_block_id > target_block_id {
+        while next_block_id > target_block_id && fork_block_hash != fork_manager.get_root() {
             prev_fork_block_hash = fork_block_hash;
             fork_block_hash = fork_manager
                 .get_previous_ancestor_fork_block_hash(fork_block_hash)
@@ -66,14 +70,23 @@ impl BlocksDatabase {
                 .unwrap()
                 .get_block_id();
         }
-        // crawl up the parent blocks until we reach the block id we are searching for
-        let mut nearest_descendant_block = self.get_block_by_hash(prev_fork_block_hash).unwrap();
-        while nearest_descendant_block.get_id() > target_block_id {
-            nearest_descendant_block = self
-                .get_block_by_hash(&nearest_descendant_block.get_previous_block_hash())
+        if fork_block_hash == fork_manager.get_root() {
+            // we got to the root, get block from the longest chain
+            let block_hash = longest_chain_queue
+                .get_block_hash_by_id(target_block_id)
                 .unwrap();
+            Some(self.get_block_by_hash(block_hash).unwrap())
+        } else {
+            // we are still in a fork, crawl up the parent blocks until we reach the block id we are searching for
+            let mut nearest_descendant_block =
+                self.get_block_by_hash(prev_fork_block_hash).unwrap();
+            while nearest_descendant_block.get_id() > target_block_id {
+                nearest_descendant_block = self
+                    .get_block_by_hash(&nearest_descendant_block.get_previous_block_hash())
+                    .unwrap();
+            }
+            Some(nearest_descendant_block)
         }
-        Some(nearest_descendant_block)
     }
 }
 
