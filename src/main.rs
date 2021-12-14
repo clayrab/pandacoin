@@ -1,8 +1,12 @@
 use clap::Clap;
 use log::{debug, error, info, warn};
 use pandacoin::block::PandaBlock;
+use pandacoin::block_fee_manager::BlockFeeManager;
+use pandacoin::blocks_database::BlocksDatabase;
 use pandacoin::constants::Constants;
+use pandacoin::fork_manager::ForkManager;
 use pandacoin::keypair_store::KeypairStore;
+use pandacoin::longest_chain_queue::LongestChainQueue;
 use pandacoin::mempool::{AbstractMempool, Mempool};
 use pandacoin::miniblock_manager::MiniblockManager;
 use pandacoin::timestamp_generator::{AbstractTimestampGenerator, SystemTimestampGenerator};
@@ -11,7 +15,6 @@ use std::sync::Arc;
 use tokio::signal;
 use tokio::sync::RwLock;
 use tracing::{event, Level};
-use tracing_subscriber;
 
 use pandacoin::blockchain::Blockchain;
 use pandacoin::command_line_opts::CommandLineOpts;
@@ -35,23 +38,35 @@ pub async fn main() -> pandacoin::Result<()> {
         println!("*********** CREATING GENESIS BLOCK ************");
         println!("***********************************************");
         genesis_block = PandaBlock::new_genesis_block(
-            keypair_store.get_keypair().get_public_key().clone(),
+            *keypair_store.get_keypair().get_public_key(),
             timestamp_generator.get_timestamp(),
             constants.get_starting_block_fee(),
         );
     } else {
         // TODO read the genesis block from disk
         genesis_block = PandaBlock::new_genesis_block(
-            keypair_store.get_keypair().get_public_key().clone(),
+            *keypair_store.get_keypair().get_public_key(),
             timestamp_generator.get_timestamp(),
             constants.get_starting_block_fee(),
         );
     }
 
+    let longest_chain_queue = LongestChainQueue::new(&genesis_block);
+    let fork_manager = ForkManager::new(&genesis_block, constants.clone());
+    let block_fee_manager = BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
+    let blocks_database = BlocksDatabase::new(genesis_block);
     let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
         Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
+
     let _blockchain_mutex_ref = Arc::new(RwLock::new(Box::new(
-        Blockchain::new(genesis_block, utxoset_ref.clone()).await,
+        Blockchain::new(
+            fork_manager,
+            longest_chain_queue,
+            blocks_database,
+            block_fee_manager,
+            utxoset_ref.clone(),
+        )
+        .await,
     )));
     let mempool_mutex_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
         Arc::new(RwLock::new(Box::new(Mempool::new(utxoset_ref.clone()))));

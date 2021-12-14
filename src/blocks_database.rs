@@ -21,19 +21,12 @@ impl BlocksDatabase {
     pub fn new(genesis_block: Box<dyn RawBlock>) -> Self {
         let mut blocks_database = HashMap::new();
         blocks_database.insert(*genesis_block.get_hash(), genesis_block);
-        BlocksDatabase {
-            blocks_database,
-        }
+        BlocksDatabase { blocks_database }
     }
 
     // TODO remove the hash from this function and just get it from the block itself.
-    pub fn insert(
-        &mut self,
-        block_hash: Sha256Hash,
-        block: Box<dyn RawBlock>,
-    ) -> Option<&Box<dyn RawBlock>> {
-        self.blocks_database.insert(block_hash, block);
-        self.blocks_database.get(&block_hash)
+    pub fn insert(&mut self, block: Box<dyn RawBlock>) {
+        self.blocks_database.insert(*block.get_hash(), block);
     }
 
     pub fn remove(&mut self, block_hash: &Sha256Hash) {
