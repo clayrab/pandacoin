@@ -144,6 +144,12 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">block::RawBlock</span>, <span class="ident">panda_protos::TransactionProto</span>, <span class="ident">types::Sha256Hash</span>};
 
 <span class="doccomment">/// This Mock RawBlock is used for testing Block Fee</span>
@@ -232,6 +238,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MockRawBlockForBlockchain</span> {
     <span class="ident">mock_block_id</span>: <span class="ident">u32</span>,
+    <span class="ident">mock_block_fee</span>: <span class="ident">u64</span>,
     <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
     <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>,
     <span class="ident">timestamp</span>: <span class="ident">u64</span>,
@@ -240,6 +247,7 @@
 <span class="kw">impl</span> <span class="ident">MockRawBlockForBlockchain</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">mock_block_id</span>: <span class="ident">u32</span>,
+        <span class="ident">mock_block_fee</span>: <span class="ident">u64</span>,
         <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
         <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>,
         <span class="ident">timestamp</span>: <span class="ident">u64</span>,
@@ -247,6 +255,7 @@
     ) -&gt; <span class="self">Self</span> {
         <span class="ident">MockRawBlockForBlockchain</span> {
             <span class="ident">mock_block_id</span>,
+            <span class="ident">mock_block_fee</span>,
             <span class="ident">mock_block_hash</span>,
             <span class="ident">mock_parent_hash</span>,
             <span class="ident">timestamp</span>,
@@ -266,6 +275,9 @@
     }
     <span class="kw">fn</span> <span class="ident">get_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">timestamp</span>
+    }
+    <span class="kw">fn</span> <span class="ident">get_block_fee</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">mock_block_fee</span>
     }
     <span class="kw">fn</span> <span class="ident">get_transactions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionProto</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transactions</span>

@@ -1450,6 +1450,12 @@
 <span id="1450">1450</span>
 <span id="1451">1451</span>
 <span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
     <span class="ident">sync::Arc</span>,
@@ -1478,6 +1484,7 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// The datastructure maintains a structure like the following:</span>
 <span class="doccomment">///</span>
+<span class="doccomment">///```text</span>
 <span class="doccomment">///     [F]</span>
 <span class="doccomment">///      |  [F]</span>
 <span class="doccomment">///      |   |  [F]</span>
@@ -1490,6 +1497,8 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// [F] = ForkBlock</span>
 <span class="doccomment">/// [R] = Root</span>
+<span class="doccomment">/// ```</span>
+<span class="doccomment">///</span>
 <span class="doccomment">/// The Root will move relative to the Latest Block on the Longest Chain by MAX_REORG blocks.</span>
 <span class="doccomment">/// As ForkBlocks becomes the Root, their blocks off of the Longest Chain will be cleaned up</span>
 <span class="doccomment">/// from the BlocksDatabase. Blocks may be added at any point in the datastructure and only</span>
@@ -1542,16 +1551,10 @@
         <span class="comment">//     (genesis_block.get_hash().clone(),ForkBlock::new()),</span>
         <span class="comment">// ]);</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fork_blocks</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span>, <span class="ident">ForkBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
-        <span class="ident">fork_blocks</span>.<span class="ident">insert</span>(
-            <span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>(),
-            <span class="ident">ForkBlock::new</span>(<span class="ident">genesis_block</span>),
-        );
+        <span class="ident">fork_blocks</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>(), <span class="ident">ForkBlock::new</span>(<span class="ident">genesis_block</span>));
         <span class="comment">// the genesis block will point to itself to close the loop at the end.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fork_block_pointers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span>, <span class="ident">Sha256Hash</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
-        <span class="ident">fork_block_pointers</span>.<span class="ident">insert</span>(
-            <span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>(),
-            <span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>(),
-        );
+        <span class="ident">fork_block_pointers</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>(), <span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>());
 
         <span class="ident">ForkManager</span> {
             <span class="ident">fork_blocks</span>,
@@ -1571,7 +1574,9 @@
             <span class="kw">if</span> <span class="ident">fork_block_pointer_hash</span> <span class="op">==</span> <span class="ident">block_hash</span> {
                 <span class="prelude-val">None</span>
             } <span class="kw">else</span> {
-                <span class="self">self</span>.<span class="ident">fork_blocks</span>.<span class="ident">get</span>(<span class="ident">fork_block_pointer_hash</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">fork_block</span><span class="op">|</span> (<span class="ident">fork_block_pointer_hash</span>, <span class="ident">fork_block</span>))
+                <span class="self">self</span>.<span class="ident">fork_blocks</span>
+                    .<span class="ident">get</span>(<span class="ident">fork_block_pointer_hash</span>)
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">fork_block</span><span class="op">|</span> (<span class="ident">fork_block_pointer_hash</span>, <span class="ident">fork_block</span>))
             }
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
@@ -1771,9 +1776,7 @@
             <span class="self">self</span>.<span class="ident">fork_blocks</span>
                 .<span class="ident">entry</span>(<span class="ident">this_block</span>.<span class="ident">get_previous_block_hash</span>())
                 .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">fork_block</span><span class="op">|</span> {
-                    <span class="ident">fork_block</span>
-                        .<span class="ident">fork_children</span>
-                        .<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">this_block</span>.<span class="ident">get_hash</span>());
+                    <span class="ident">fork_block</span>.<span class="ident">fork_children</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">this_block</span>.<span class="ident">get_hash</span>());
                 });
             <span class="comment">// update this block&#39;s fork_block_pointer to the one which is already in fork_blocks</span>
             <span class="self">self</span>.<span class="ident">fork_block_pointers</span>
@@ -1791,14 +1794,12 @@
         <span class="ident">blocks_database</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BlocksDatabase</span>,
         <span class="ident">longest_chain_queue</span>: <span class="kw-2">&amp;</span><span class="ident">LongestChainQueue</span>,
     ) {
-        <span class="macro">println!</span>(
-            <span class="string">&quot;****************** roll forward... {:?}&quot;</span>,
-            <span class="ident">next_block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>()
-        );
+        <span class="macro">println!</span>(<span class="string">&quot;** roll forward ** {:?}&quot;</span>, <span class="ident">next_block</span>.<span class="ident">get_hash</span>().<span class="ident">clone</span>());
         <span class="comment">// the fork_block_pointer for next_block is the same as it&#39;s parent&#39;s. Insert it into fork_block_pointers.</span>
         <span class="self">self</span>.<span class="ident">fork_block_pointers</span>.<span class="ident">insert</span>(
             <span class="kw-2">*</span><span class="ident">next_block</span>.<span class="ident">get_hash</span>(),
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">fork_block_pointers</span>
+            <span class="kw-2">*</span><span class="self">self</span>
+                .<span class="ident">fork_block_pointers</span>
                 .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">next_block</span>.<span class="ident">get_previous_block_hash</span>())
                 .<span class="ident">unwrap</span>(),
         );
@@ -1831,8 +1832,7 @@
                         .<span class="ident">constants</span>
                         .<span class="ident">get_number_of_blocks_for_target_calc</span>(),
                 );
-                <span class="self">self</span>.<span class="ident">fork_blocks</span>
-                    .<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">next_block</span>.<span class="ident">get_hash</span>(), <span class="ident">fork_block</span>);
+                <span class="self">self</span>.<span class="ident">fork_blocks</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">next_block</span>.<span class="ident">get_hash</span>(), <span class="ident">fork_block</span>);
 
                 <span class="comment">// get the ancestor ForkBlock children and remove the previous child and add the new child</span>
                 <span class="self">self</span>.<span class="ident">fork_blocks</span>
@@ -1918,8 +1918,7 @@
                     .<span class="ident">roll_front_forward</span>();
             }
             <span class="comment">// re-insert the modified root_fork_block</span>
-            <span class="self">self</span>.<span class="ident">fork_blocks</span>
-                .<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">reorg_block_hash</span>, <span class="ident">root_fork_block</span>);
+            <span class="self">self</span>.<span class="ident">fork_blocks</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">reorg_block_hash</span>, <span class="ident">root_fork_block</span>);
 
             <span class="comment">// Replace all the pointers between new root(reorg_block_hash) and this_branch.</span>
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">next_parent</span> <span class="op">=</span> <span class="ident">next_block</span>;
@@ -2050,6 +2049,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_1</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">1</span>,
+            <span class="number">1000</span>,
             [<span class="number">1</span>; <span class="number">32</span>],
             <span class="ident">genesis_block_hash</span>,
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2059,12 +2059,13 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_1</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_1</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_1</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_1</span>);
 
         <span class="comment">// insert block 2</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_2</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">2</span>,
+            <span class="number">1000</span>,
             [<span class="number">2</span>; <span class="number">32</span>],
             [<span class="number">1</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2074,12 +2075,13 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_2</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_2</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_2</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_2</span>);
 
         <span class="comment">// insert block 3</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">3</span>,
+            <span class="number">1000</span>,
             [<span class="number">3</span>; <span class="number">32</span>],
             [<span class="number">2</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2090,12 +2092,13 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_3</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_3</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_3</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_3</span>);
 
         <span class="comment">// insert block 4</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_4</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">4</span>,
+            <span class="number">1000</span>,
             [<span class="number">4</span>; <span class="number">32</span>],
             [<span class="number">3</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2106,7 +2109,7 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_4</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_4</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_4</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_4</span>);
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>.<span class="ident">get_previous_ancestor_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>);
         <span class="kw">let</span> <span class="ident">fork_block</span> <span class="op">=</span> <span class="ident">fork_manager</span>
@@ -2117,11 +2120,11 @@
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block</span>.<span class="number">1</span>.<span class="ident">fork_children</span>.<span class="ident">len</span>(), <span class="number">1</span>);
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>));
 
@@ -2129,6 +2132,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_5</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">5</span>,
+            <span class="number">1000</span>,
             [<span class="number">5</span>; <span class="number">32</span>],
             [<span class="number">4</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2138,7 +2142,7 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_5</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_5</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_5</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_5</span>);
     }
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
@@ -2195,6 +2199,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_1</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">1</span>,
+            <span class="number">1000</span>,
             [<span class="number">1</span>; <span class="number">32</span>],
             <span class="ident">genesis_block_hash</span>,
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2205,7 +2210,7 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_1</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_1</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_1</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_1</span>);
 
         <span class="macro">assert_eq!</span>(
             <span class="ident">fork_manager</span>
@@ -2256,6 +2261,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_2</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">2</span>,
+            <span class="number">1000</span>,
             [<span class="number">2</span>; <span class="number">32</span>],
             [<span class="number">1</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2266,7 +2272,7 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_2</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_2</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_2</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_2</span>);
 
         <span class="macro">assert_eq!</span>(
             <span class="ident">fork_manager</span>
@@ -2328,6 +2334,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">3</span>,
+            <span class="number">1000</span>,
             [<span class="number">3</span>; <span class="number">32</span>],
             [<span class="number">2</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2338,12 +2345,13 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_3</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_3</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_3</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_3</span>);
 
         <span class="comment">// insert block 4</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_4</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">4</span>,
+            <span class="number">1000</span>,
             [<span class="number">4</span>; <span class="number">32</span>],
             [<span class="number">3</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2354,7 +2362,7 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_4</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_4</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_4</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_4</span>);
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>.<span class="ident">get_previous_ancestor_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>);
         <span class="kw">let</span> <span class="ident">fork_block</span> <span class="op">=</span> <span class="ident">fork_manager</span>
@@ -2365,11 +2373,11 @@
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block</span>.<span class="number">1</span>.<span class="ident">fork_children</span>.<span class="ident">len</span>(), <span class="number">1</span>);
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>));
 
@@ -2377,6 +2385,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3b</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">3</span>,
+            <span class="number">1000</span>,
             [<span class="number">30</span>; <span class="number">32</span>],
             [<span class="number">2</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2387,7 +2396,7 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_3b</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_3b</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_3b</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_3b</span>);
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
             .<span class="ident">get_previous_ancestor_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_2_hash</span>)
@@ -2415,19 +2424,19 @@
         <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">fork_children</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>));
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3b_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3b_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>));
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_2_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_2_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
 
@@ -2435,6 +2444,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_4b</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">4</span>,
+            <span class="number">1000</span>,
             [<span class="number">40</span>; <span class="number">32</span>],
             [<span class="number">30</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2445,18 +2455,18 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_4b</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_4b</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_4b</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_4b</span>);
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3b_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3b_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">block_4b_hash</span>));
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4b_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4b_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>.<span class="ident">get_previous_ancestor_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4b_hash</span>);
@@ -2466,6 +2476,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3c</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">3</span>,
+            <span class="number">1000</span>,
             [<span class="number">31</span>; <span class="number">32</span>],
             [<span class="number">2</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2476,14 +2487,14 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_3c</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_3c</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_3c</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_3c</span>);
 
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_4_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>
-            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3c_hash</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>)
+            .<span class="ident">get_next_descendant_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3c_hash</span>, <span class="kw-2">&amp;</span><span class="ident">blocks_database</span>)
             .<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">fork_block_hash</span>, <span class="prelude-val">None</span>);
         <span class="kw">let</span> <span class="ident">fork_block_hash</span> <span class="op">=</span> <span class="ident">fork_manager</span>.<span class="ident">get_previous_ancestor_fork_block_hash</span>(<span class="kw-2">&amp;</span><span class="ident">block_3c_hash</span>);
@@ -2505,6 +2516,7 @@
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">mock_block_5</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">5</span>,
+            <span class="number">1000</span>,
             [<span class="number">5</span>; <span class="number">32</span>],
             [<span class="number">4</span>; <span class="number">32</span>],
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
@@ -2515,7 +2527,7 @@
         <span class="ident">fork_manager</span>
             .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_5</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="ident">longest_chain_queue</span>)
             .<span class="kw">await</span>;
-        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">mock_block_5</span>.<span class="ident">get_hash</span>(), <span class="ident">mock_block_5</span>);
+        <span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">mock_block_5</span>);
 
         <span class="macro">assert_eq!</span>(
             <span class="ident">fork_manager</span>.<span class="ident">get_fork_children_of_fork_block</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_block_hash</span>),
