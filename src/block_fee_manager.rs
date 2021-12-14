@@ -84,65 +84,6 @@ impl BlockFeeManager {
         }
     }
 
-    pub fn roll_forward_old(&mut self, block_timestamp: u64, block_fee: u64) {
-        // TODO we should be able to remove this assert once the blockchain is handling block fee validation, but
-        // it's helpful to leave it in for now just so we will get an early warning if something is wrong.
-        assert!(block_fee >= self.get_next_fee_old());
-        self.timestamps.push(block_timestamp);
-        self.block_fees.push(block_fee);
-        self.total_fees += block_fee;
-        if self.block_fees.len()
-            > self
-                .context
-                .constants
-                .get_number_of_blocks_for_target_calc() as usize
-        {
-            self.total_fees -= self.block_fees[self.block_fees.len()
-                - self
-                    .context
-                    .constants
-                    .get_number_of_blocks_for_target_calc() as usize
-                - 1];
-        }
-    }
-    pub fn roll_forward(&mut self, root_block: &Box<dyn RawBlock>) {
-        self.timestamps.push(root_block.get_timestamp());
-        self.block_fees.push(root_block.get_block_fee());
-        self.total_fees += root_block.get_block_fee();
-        if self.block_fees.len()
-            > self
-                .context
-                .constants
-                .get_number_of_blocks_for_target_calc() as usize
-        {
-            self.total_fees -= self.block_fees[self.block_fees.len()
-                - self
-                    .context
-                    .constants
-                    .get_number_of_blocks_for_target_calc() as usize
-                - 1];
-        }
-    }
-
-    pub fn roll_back(&mut self) {
-        self.total_fees -= self.block_fees.last().unwrap();
-        self.timestamps.pop();
-        self.block_fees.pop();
-        if self.block_fees.len()
-            > self
-                .context
-                .constants
-                .get_number_of_blocks_for_target_calc() as usize
-        {
-            self.total_fees += self.block_fees[self.block_fees.len()
-                - self
-                    .context
-                    .constants
-                    .get_number_of_blocks_for_target_calc() as usize
-                - 1];
-        }
-    }
-
     pub async fn get_next_fee_on_fork(
         &self,
         next_block: &Box<dyn RawBlock>,
@@ -280,55 +221,7 @@ impl BlockFeeManager {
         let avg_fee = total_fees / block_count_diff as u64;
         let expected_time_ms =
             self.context.constants.get_block_time_target_ms() * block_count_diff as u64;
-        println!("get next fee done. blockid:{} lastid:{} total_fees:{} block_count_diff:{} avg_fee:{} expected_time_ms:{} time_diff:{}", last_block.get_id(), earliest_block_id, total_fees, block_count_diff, avg_fee, expected_time_ms, time_diff);
         avg_fee * expected_time_ms / time_diff
-    }
-
-    pub fn get_next_fee_old(&self) -> u64 {
-        let next_fee;
-        if self.timestamps.is_empty() {
-            next_fee = self.context.constants.get_starting_block_fee();
-        } else if self.timestamps.len() == 1 {
-            next_fee = self.context.constants.get_starting_block_fee();
-        } else if self.timestamps.len()
-            > self
-                .context
-                .constants
-                .get_number_of_blocks_for_target_calc() as usize
-        {
-            let avg_fee = self.total_fees
-                / self
-                    .context
-                    .constants
-                    .get_number_of_blocks_for_target_calc();
-            // we add mock_block_time_target to the timediff to deal with the fencepost problem, basically pretending that the first block took mock_block_time_target to produce.
-            // We do not subtract 1 from the timestamps index because we also want to add one to account for the fence post problem seemlessly from the else case below.
-            // i.e. for N blocks, last - first included the time_diff across N-1 blocks, however, self.timestamps.len() is also 1 too large, so these cancel eachother out
-            // and we are just left with just "self.timestamps.len() - N" (i.e. the index of the N-1th blocks prior to the last)
-            let time_diff = self.context.constants.get_block_time_target_ms()
-                + (self.timestamps.last().unwrap()
-                    - self.timestamps[self.timestamps.len()
-                        - self
-                            .context
-                            .constants
-                            .get_number_of_blocks_for_target_calc()
-                            as usize]);
-            let expected_time_ms = self.context.constants.get_block_time_target_ms()
-                * self
-                    .context
-                    .constants
-                    .get_number_of_blocks_for_target_calc();
-            next_fee = avg_fee * expected_time_ms / time_diff;
-        } else {
-            let avg_fee = self.total_fees / self.timestamps.len() as u64;
-            // we add mock_block_time_target to the timediff to deal with the fencepost problem, basically pretending that the first block took mock_block_time_target to produce
-            let time_diff = self.context.constants.get_block_time_target_ms()
-                + (self.timestamps.last().unwrap() - self.timestamps.first().unwrap());
-            let expected_time_ms =
-                self.context.constants.get_block_time_target_ms() * (self.timestamps.len()) as u64;
-            next_fee = avg_fee * expected_time_ms / time_diff;
-        }
-        next_fee
     }
 }
 
@@ -382,7 +275,7 @@ mod test {
         fork_manager
             .roll_forward(&mock_block, blocks_database, longest_chain_queue)
             .await;
-        blocks_database.insert(*mock_block.get_hash(), mock_block);
+        blocks_database.insert(mock_block);
     }
     #[tokio::test]
     async fn block_fee_big_fees_test_new() {

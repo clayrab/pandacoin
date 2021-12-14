@@ -28,7 +28,7 @@ impl LongestChainQueue {
     }
 
     pub fn get_block_hash_by_id(&self, id: u32) -> Option<&Sha256Hash> {
-        if self.block_hashes.len() >= id as usize {
+        if self.block_hashes.len() > id as usize {
             Some(&self.block_hashes[id as usize])
         } else {
             None
