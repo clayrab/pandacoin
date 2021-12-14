@@ -5,7 +5,7 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIter
 use crate::block::RawBlock;
 use crate::blockchain::ForkChains;
 use crate::constants::Constants;
-use crate::panda_protos::{OutputIdProto, OutputProto, TransactionProto};
+use crate::panda_protos::{OutputIdProto, OutputProto, RawBlockProto, TransactionProto};
 use crate::types::Sha256Hash;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -117,7 +117,7 @@ pub trait AbstractUtxoSet: Debug {
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>>;
     fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto>;
     fn transaction_fees(&self, tx: &TransactionProto) -> u64;
-    fn block_fees(&self, block: &Box<dyn RawBlock>) -> u64;
+    fn block_fees(&self, block: &RawBlockProto) -> u64;
 }
 
 #[derive(Debug)]
@@ -443,7 +443,8 @@ impl AbstractUtxoSet for UtxoSet {
             output_ids
                 .iter()
                 .map(|input| self.output_status_from_output_id(input))
-                .collect::<Option<Vec<OutputProto>>>().map(|outputs| outputs.iter().map(|output| output.amount()).sum())
+                .collect::<Option<Vec<OutputProto>>>()
+                .map(|outputs| outputs.iter().map(|output| output.amount()).sum())
         }
     }
 
@@ -499,9 +500,9 @@ impl AbstractUtxoSet for UtxoSet {
         // TODO protect this from overflows, this needs to be asserted before computed or something.
         input_amt - output_amt
     }
-    fn block_fees(&self, block: &Box<dyn RawBlock>) -> u64 {
+    fn block_fees(&self, block: &RawBlockProto) -> u64 {
         block
-            .get_transactions()
+            .transactions
             .iter()
             .map(|tx| self.transaction_fees(tx))
             .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
@@ -605,10 +606,7 @@ mod test {
             ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![
-                *mock_block_a.get_hash(),
-                *mock_block_b.get_hash(),
-            ],
+            new_chain: vec![*mock_block_a.get_hash(), *mock_block_b.get_hash()],
         };
         // ********* roll_forward tx a  *********
         utxo_set.roll_forward(&mock_block_a);
@@ -684,10 +682,7 @@ mod test {
             ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![
-                *mock_block_a.get_hash(),
-                *mock_block_b.get_hash(),
-            ],
+            new_chain: vec![*mock_block_a.get_hash(), *mock_block_b.get_hash()],
         };
         // it should be spendable at block b as a new fork but not spendable at block id 1
         // on the longest chain
@@ -720,11 +715,7 @@ mod test {
             ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![
-                *mock_block_a.get_hash(),
-                *mock_block_b.get_hash(),
-                [3; 32],
-            ],
+            new_chain: vec![*mock_block_a.get_hash(), *mock_block_b.get_hash(), [3; 32]],
         };
         assert_eq!(
             utxo_set.longest_chain_spent_status(&output_b_input, mock_block_a.get_id() - 1),
@@ -758,10 +749,7 @@ mod test {
             ancestor_block_hash: *mock_block_a.get_hash(),
             ancestor_block_id: mock_block_a.get_id(),
             old_chain: vec![],
-            new_chain: vec![
-                *mock_block_a.get_hash(),
-                *mock_block_b.get_hash(),
-            ],
+            new_chain: vec![*mock_block_a.get_hash(), *mock_block_b.get_hash()],
         };
         assert!(
             !utxo_set
@@ -989,11 +977,18 @@ mod test {
             assert_eq!(1, fee);
         }
 
-        let mock_block_2: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForUTXOSet::new(2, [2; 32], block_2_txs));
+        let block_proto = RawBlockProto {
+            id: 1,
+            timestamp: 0,
+            creator: vec![],
+            signature: vec![],
+            previous_block_hash: [2; 32].to_vec(),
+            merkle_root: vec![],
+            transactions: block_2_txs,
+        };
 
-        utxo_set.roll_forward(&mock_block_2);
-        let total_fee = utxo_set.block_fees(&mock_block_2);
+        //utxo_set.roll_forward(&mock_block_2);
+        let total_fee = utxo_set.block_fees(&block_proto);
         assert_eq!(4, total_fee);
     }
 }

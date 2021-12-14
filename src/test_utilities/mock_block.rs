@@ -86,6 +86,7 @@ impl RawBlock for MockRawBlockForUTXOSet {
 #[derive(Debug)]
 pub struct MockRawBlockForBlockchain {
     mock_block_id: u32,
+    mock_block_fee: u64,
     mock_block_hash: Sha256Hash,
     mock_parent_hash: Sha256Hash,
     timestamp: u64,
@@ -94,6 +95,7 @@ pub struct MockRawBlockForBlockchain {
 impl MockRawBlockForBlockchain {
     pub fn new(
         mock_block_id: u32,
+        mock_block_fee: u64,
         mock_block_hash: Sha256Hash,
         mock_parent_hash: Sha256Hash,
         timestamp: u64,
@@ -101,6 +103,7 @@ impl MockRawBlockForBlockchain {
     ) -> Self {
         MockRawBlockForBlockchain {
             mock_block_id,
+            mock_block_fee,
             mock_block_hash,
             mock_parent_hash,
             timestamp,
@@ -120,6 +123,9 @@ impl RawBlock for MockRawBlockForBlockchain {
     }
     fn get_timestamp(&self) -> u64 {
         self.timestamp
+    }
+    fn get_block_fee(&self) -> u64 {
+        self.mock_block_fee
     }
     fn get_transactions(&self) -> &Vec<TransactionProto> {
         &self.transactions
