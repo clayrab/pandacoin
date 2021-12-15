@@ -1,3 +1,4 @@
+use crate::transaction::Transaction;
 use crate::utxoset::AbstractUtxoSet;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -24,5 +25,8 @@ impl Mempool {
         Mempool {
             context: MempoolContext { utxoset_ref },
         }
+    }
+    pub fn add_transaction(&mut self, _transaction: Transaction) {
+        
     }
 }

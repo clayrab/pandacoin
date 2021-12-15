@@ -1,5 +1,6 @@
 use crate::crypto::hash_bytes;
-use crate::panda_protos::{RawBlockProto, TransactionProto};
+use crate::panda_protos::RawBlockProto;
+use crate::transaction::Transaction;
 use crate::types::Sha256Hash;
 use crate::utxoset::AbstractUtxoSet;
 use async_std::sync::RwLock;
@@ -40,12 +41,13 @@ pub trait RawBlock: Sync + Debug + Send {
     fn get_id(&self) -> u32 {
         0
     }
-    fn get_transactions(&self) -> &Vec<TransactionProto>;
+    fn get_transactions(&self) -> &Vec<Transaction>;
 }
 #[derive(Debug)]
 pub struct PandaBlock {
     hash: Sha256Hash,
     fee: u64,
+    transactions: Vec<Transaction>,
     block_proto: RawBlockProto,
 }
 
@@ -77,6 +79,7 @@ impl PandaBlock {
             hash,
             fee: block_fees,
             block_proto,
+            transactions: vec![]
         }
     }
 
@@ -85,6 +88,7 @@ impl PandaBlock {
         timestamp: u64,
         block_fee: u64,
     ) -> Box<dyn RawBlock> {
+        // TODO add transactions
         let signature = Signature::from_compact(&[0; 64]).unwrap();
         let block_proto = RawBlockProto {
             id: 0,
@@ -100,6 +104,7 @@ impl PandaBlock {
             hash,
             fee: block_fee,
             block_proto,
+            transactions: vec![],
         };
         Box::new(block)
     }
@@ -151,8 +156,8 @@ impl RawBlock for PandaBlock {
     fn get_id(&self) -> u32 {
         self.block_proto.id
     }
-    fn get_transactions(&self) -> &Vec<TransactionProto> {
-        &self.block_proto.transactions
+    fn get_transactions(&self) -> &Vec<Transaction> {
+        &self.transactions
     }
 }
 

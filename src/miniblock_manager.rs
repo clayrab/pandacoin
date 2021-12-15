@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{sync::Arc, collections::HashSet};
 use tokio::sync::RwLock;
 
-use crate::{mempool::AbstractMempool, utxoset::AbstractUtxoSet};
+use crate::{mempool::AbstractMempool, utxoset::AbstractUtxoSet, types::Sha256Hash};
 
 #[derive(Debug)]
 struct MiniblockManagerContext {
@@ -12,6 +12,10 @@ struct MiniblockManagerContext {
 #[derive(Debug)]
 pub struct MiniblockManager {
     context: MiniblockManagerContext,
+}
+
+pub struct Miniblock {
+    inputs: HashSet<Sha256Hash>,
 }
 
 impl MiniblockManager {
@@ -25,6 +29,32 @@ impl MiniblockManager {
                 utxoset_ref,
                 mempool_ref,
             },
+        }
+    }
+    pub fn roll_forward(&self) {
+
+    }
+
+    pub fn roll_back(&self) {
+        
+    }
+
+
+    pub fn a_not_b(miniblock_a: Miniblock, miniblock_b: Miniblock) -> Miniblock {
+        Miniblock {
+            inputs: HashSet::new()
+        }
+    }
+}
+
+impl Miniblock {
+    pub fn serialize(&self) {
+        
+    }
+    
+    pub fn deserialize() -> Self {
+        Miniblock {
+            inputs: HashSet::new()
         }
     }
 }
