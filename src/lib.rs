@@ -14,6 +14,7 @@ pub mod miniblock_manager;
 pub mod output;
 #[path = "proto/out/panda_protos.rs"]
 pub mod panda_protos;
+pub mod shutdown_signals;
 pub mod tests_setup;
 pub mod timestamp_generator;
 pub mod transaction;

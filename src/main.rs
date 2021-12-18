@@ -9,11 +9,11 @@ use pandacoin::keypair_store::KeypairStore;
 use pandacoin::longest_chain_queue::LongestChainQueue;
 use pandacoin::mempool::{AbstractMempool, Mempool};
 use pandacoin::miniblock_manager::MiniblockManager;
+use pandacoin::shutdown_signals::signal_for_shutdown;
 use pandacoin::timestamp_generator::{AbstractTimestampGenerator, SystemTimestampGenerator};
 use std::env;
 use std::sync::Arc;
-use tokio::signal;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, broadcast, mpsc};
 use tracing::{event, Level};
 
 use pandacoin::blockchain::Blockchain;
@@ -26,6 +26,8 @@ pub async fn main() -> pandacoin::Result<()> {
 
     // Initialize all "globals", timestamp generator, command line opts, keypair store, utxoset, blockchain, etc
     let constants = Arc::new(Constants::new());
+    let (shutdown_channel_sender, shutdown_channel_receiver) = broadcast::channel(1);
+    let (shutdown_waiting_sender , mut shutdown_waiting_receiver) = mpsc::channel::<()>(1);
     let timestamp_generator = Box::new(SystemTimestampGenerator::new());
     let command_line_opts = Arc::new(CommandLineOpts::parse());
     let keypair_store = KeypairStore::new(command_line_opts.clone());
@@ -69,7 +71,11 @@ pub async fn main() -> pandacoin::Result<()> {
         .await,
     )));
     let mempool_mutex_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
-        Arc::new(RwLock::new(Box::new(Mempool::new(utxoset_ref.clone()))));
+        Arc::new(RwLock::new(Box::new(Mempool::new(
+            utxoset_ref.clone(),
+            shutdown_channel_receiver,
+            shutdown_waiting_sender.clone(),
+        ).await)));
     let _miniblock_manager_mutex_ref = Arc::new(RwLock::new(Box::new(MiniblockManager::new(
         utxoset_ref.clone(),
         mempool_mutex_ref.clone(),
@@ -90,20 +96,38 @@ pub async fn main() -> pandacoin::Result<()> {
 
     println!("Key: {}", keypair_store.get_keypair().get_public_key());
 
-    tokio::select! {
-        res = run() => {
-            if let Err(err) = res {
-                eprintln!("Runtime has thrown an error: {:?}", err);
-            }
+    // Run whatever tasks compose the application
+    tokio::spawn(async move {
+        run()
+    });
+
+    // Wait for a shutdown signal
+    match signal_for_shutdown().await {
+        Ok(()) => {
+            println!("Shutting down");
         },
-        _ = signal::ctrl_c() => {
-            println!("Shutting down!")
-        }
+        Err(err) => {
+            eprintln!("Unable to listen for shutdown signal: {}", err);
+            // we also shut down in case of error
+        },
     }
+    // The shutdown signal has been received, send a shutdown message to each async task
+    let _res = shutdown_channel_sender.send(());
+    
+    // Wait for everyone to shutdown gracefully! We do this by dropping the reference
+    // to the waiting_sender, the recv() will then throw an error when the last reference
+    // to the sender is dropped. Each async task should hold a reference to the sender so that 
+    // this works properly. See https://tokio.rs/tokio/topics/shutdown for details.
+    drop(shutdown_waiting_sender);
+    let _ = shutdown_waiting_receiver.recv().await;
+    
+    println!("Shutdown Complete");
     Ok(())
 }
 
 async fn run() -> pandacoin::Result<()> {
-    loop {}
+    loop {
+        //println!("loop");
+    }
     // Ok(())
 }

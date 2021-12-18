@@ -32,15 +32,14 @@ impl MiniblockManager {
         }
     }
     pub fn roll_forward(&self) {
-
+        
     }
 
     pub fn roll_back(&self) {
         
     }
 
-
-    pub fn a_not_b(miniblock_a: Miniblock, miniblock_b: Miniblock) -> Miniblock {
+    pub fn a_not_b(_miniblock_a: Miniblock, _miniblock_b: Miniblock) -> Miniblock {
         Miniblock {
             inputs: HashSet::new()
         }
