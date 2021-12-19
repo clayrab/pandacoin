@@ -18,7 +18,7 @@ use std::sync::Arc;
 /// Rust does not allow this.
 ///
 
-pub trait RawBlock: Sync + Debug + Send {
+pub trait RawBlock: Debug + Send + Sync {
     fn get_signature(&self) -> Signature {
         Signature::from_compact(&[0; 64]).unwrap()
     }
