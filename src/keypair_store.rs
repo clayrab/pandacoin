@@ -25,7 +25,7 @@ type Aes128Cbc = Cbc<Aes128, Pkcs7>;
 
 #[derive(Debug)]
 struct KeypairStoreContext {
-    command_line_opts: Arc<CommandLineOpts>,
+    _command_line_opts: Arc<CommandLineOpts>,
 }
 
 /// This manages a keypair for the user through a CLI. It will encrypt, decrypt, and store a single keypair which the node
@@ -59,18 +59,20 @@ impl KeypairStore {
 
         KeypairStore {
             keypair,
-            context: KeypairStoreContext { command_line_opts },
+            context: KeypairStoreContext {
+                _command_line_opts: command_line_opts,
+            },
         }
     }
     /// Create new `KeypairStore` for testing from existing wallet in test data.
-    pub fn new_mock(command_line_opts: Arc<CommandLineOpts>) -> Self {
+    pub fn new_mock(_command_line_opts: Arc<CommandLineOpts>) -> Self {
         let decrypted_buffer: Vec<u8>;
         decrypted_buffer =
             KeypairStore::read_key_file("data/test/testwallet", &Some(String::from("asdf")));
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
         KeypairStore {
             keypair,
-            context: KeypairStoreContext { command_line_opts },
+            context: KeypairStoreContext { _command_line_opts },
         }
     }
     /// get the keypair

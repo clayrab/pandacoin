@@ -5,9 +5,11 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::blocks_database::BlocksDatabase;
+use crate::constants::Constants;
 use crate::crypto::verify_bytes_message;
 use crate::fork_manager::ForkManager;
 use crate::longest_chain_queue::LongestChainQueue;
+use crate::mempool::AbstractMempool;
 use crate::panda_protos::transaction_proto::TxType;
 use crate::transaction::Transaction;
 use crate::types::Sha256Hash;
@@ -51,10 +53,11 @@ pub struct ForkChains {
 /// blockchain itself, including the blocks that are on the
 /// longest-chain as well as the blocks that is sitting off
 /// the longest-chain but capable of being switched over.
-
 #[derive(Debug)]
 struct BlockchainContext {
+    constants: Arc<Constants>,
     utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
+    mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
 }
 
 #[derive(Debug)]
@@ -101,6 +104,7 @@ impl AbstractBlockchain for Blockchain {
     /// what's going on.
     // async fn add_block(&mut self, block: RawBlockProto) -> AddBlockEvent {
     async fn add_block(&mut self, block: Box<dyn RawBlock>) -> AddBlockEvent {
+        // TODO blocks cannot be added if they are older than MAX_REORG
         println!(
             "***************** add block ***************** {:?}",
             block.get_hash()
@@ -127,17 +131,23 @@ impl AbstractBlockchain for Blockchain {
                     self.longest_chain_queue.roll_forward(block.get_hash());
                     let mut utxoset = self.context.utxoset_ref.write().await;
                     utxoset.roll_forward(&block);
+                    let mut mempool = self.context.mempool_ref.write().await;
+                    mempool.roll_forward(&block);
                     // OUTPUT_DB_GLOBAL
                     //     .clone()
                     //     .write()
                     //     .unwrap()
                     //     .roll_forward(&block.core());
+                    self.roll_forward_max_reorg(&block).await;
                     self.blocks_database.insert(block);
+
                     // self.storage.roll_forward(&block).await;
                     AddBlockEvent::AcceptedAsLongestChain
                 } else {
                     // We are not on the longest chain
                     if self.is_longer_chain(&fork_chains.new_chain, &fork_chains.old_chain) {
+                        assert_eq!(fork_chains.new_chain.len(), fork_chains.old_chain.len() + 1);
+                        self.roll_forward_max_reorg(&block).await;
                         self.blocks_database.insert(block);
                         // Unwind the old chain
                         let _result = fork_chains.old_chain.iter().map(|_hash| {
@@ -149,6 +159,8 @@ impl AbstractBlockchain for Blockchain {
                             self.longest_chain_queue.roll_back();
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_back(block);
+                            let mut mempool = self.context.mempool_ref.write().await;
+                            mempool.roll_back(block);
                             // OUTPUT_DB_GLOBAL
                             //     .clone()
                             //     .write()
@@ -164,6 +176,8 @@ impl AbstractBlockchain for Blockchain {
                             self.longest_chain_queue.roll_forward(block.get_hash());
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_forward(block);
+                            let mut mempool = self.context.mempool_ref.write().await;
+                            mempool.roll_forward(block);
                             // OUTPUT_DB_GLOBAL
                             //     .clone()
                             //     .write()
@@ -207,17 +221,34 @@ impl Blockchain {
         longest_chain_queue: LongestChainQueue,
         blocks_database: BlocksDatabase,
         block_fee_manager: BlockFeeManager,
+        constants: Arc<Constants>,
         utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
+        mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
     ) -> Self {
         Blockchain {
             longest_chain_queue,
             blocks_database,
             fork_manager,
             block_fee_manager,
-            context: BlockchainContext { utxoset_ref },
+            context: BlockchainContext {
+                constants,
+                utxoset_ref,
+                mempool_ref,
+            },
         }
     }
-
+    ///
+    async fn roll_forward_max_reorg(&self, current_block: &Box<dyn RawBlock>) {
+        if current_block.get_id() > self.context.constants.get_max_reorg() {
+            let mut mempool = self.context.mempool_ref.write().await;
+            mempool.roll_forward_max_reorg(
+                self.get_block_by_id(
+                    current_block.get_id() - self.context.constants.get_max_reorg(),
+                )
+                .unwrap(),
+            );
+        }
+    }
     /// If the block is in the fork
     fn contains_block_hash(&self, block_hash: &Sha256Hash) -> bool {
         self.blocks_database.contains_block_hash(block_hash)
@@ -348,7 +379,7 @@ impl Blockchain {
                     return true;
                 }
                 let utxoset = self.context.utxoset_ref.read().await;
-                if let Some(address) = utxoset.get_receiver_for_inputs(&tx.get_inputs()) {
+                if let Some(address) = utxoset.get_receiver_for_inputs(tx.get_inputs()) {
                     println!("verify sig {:?}", address);
                     if !verify_bytes_message(tx.get_hash(), tx.get_signature(), &address) {
                         error!("tx signature invalid");
@@ -378,15 +409,11 @@ impl Blockchain {
                     let input_amt: u64 = tx
                         .get_inputs()
                         .iter()
-                        .map(|input| {
-                            utxoset
-                                .output_status_from_output_id(input)
-                                .unwrap()
-                                .amount()
-                        })
+                        .map(|input| utxoset.output_from_output_id(input).unwrap().amount())
                         .sum();
 
-                    let output_1mt: u64 = tx.get_outputs().iter().map(|output| output.amount()).sum();
+                    let output_1mt: u64 =
+                        tx.get_outputs().iter().map(|output| output.amount()).sum();
 
                     let is_balanced = output_1mt == input_amt;
                     if !is_balanced {
@@ -428,6 +455,8 @@ mod tests {
     use crate::constants::Constants;
     use crate::fork_manager::ForkManager;
     use crate::longest_chain_queue::LongestChainQueue;
+    use crate::mempool::AbstractMempool;
+    use crate::test_utilities::mock_mempool::MockMempool;
     use crate::transaction::Transaction;
     use crate::utxoset::AbstractUtxoSet;
     use crate::{
@@ -466,11 +495,12 @@ mod tests {
         let genesis_block_hash = *genesis_block.get_hash();
         let mut longest_chain_queue = LongestChainQueue::new(&genesis_block);
         let fork_manager = ForkManager::new(&genesis_block, constants.clone());
-        let block_fee_manager =
-            BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
+        let block_fee_manager = BlockFeeManager::new(constants.clone());
         let mut blocks_database = BlocksDatabase::new(genesis_block);
         let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
             Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
+        let mock_mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
+            Arc::new(RwLock::new(Box::new(MockMempool::new())));
 
         let mock_block_1: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             1,
@@ -553,7 +583,9 @@ mod tests {
             longest_chain_queue,
             blocks_database,
             block_fee_manager,
+            constants.clone(),
             utxoset_ref.clone(),
+            mock_mempool_ref.clone(),
         )
         .await;
 
@@ -593,18 +625,21 @@ mod tests {
 
         let longest_chain_queue = LongestChainQueue::new(&genesis_block);
         let fork_manager = ForkManager::new(&genesis_block, constants.clone());
-        let block_fee_manager =
-            BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
+        let block_fee_manager = BlockFeeManager::new(constants.clone());
         let blocks_database = BlocksDatabase::new(genesis_block);
         let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
             Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
+        let mock_mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
+            Arc::new(RwLock::new(Box::new(MockMempool::new())));
 
         let mut blockchain = Blockchain::new(
             fork_manager,
             longest_chain_queue,
             blocks_database,
             block_fee_manager,
+            constants.clone(),
             utxoset_ref.clone(),
+            mock_mempool_ref.clone(),
         )
         .await;
         //

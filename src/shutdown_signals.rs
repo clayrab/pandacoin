@@ -1,5 +1,5 @@
-use tokio::signal;
 use tokio::io;
+use tokio::signal;
 
 #[cfg(target_os = "unix")]
 pub async fn signal_for_shutdown() -> io::Result<()> {

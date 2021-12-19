@@ -115,7 +115,7 @@ pub trait AbstractUtxoSet: Debug {
     ) -> bool;
     fn get_total_for_inputs(&self, output_ids: Vec<OutputIdProto>) -> Option<u64>;
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>>;
-    fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto>;
+    fn output_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto>;
     fn transaction_fees(&self, tx: &TransactionProto) -> u64;
     fn block_fees(&self, block: &RawBlockProto) -> u64;
 }
@@ -152,6 +152,14 @@ impl UtxoSet {
             SlipSpentStatus::new_on_longest_chain(seed_output, 0),
         );
         utxoset
+    }
+    ///
+    pub fn get_total_for_outputs(outputs: &Vec<OutputProto>) -> u64 {
+        if outputs.is_empty() {
+            0
+        } else {
+            outputs.iter().map(|output| output.amount()).sum()
+        }
     }
     /// Used internally in utxoset to determine the status of a output with respect
     /// to the longest chain. This is useful for validating a output on the longest
@@ -259,20 +267,23 @@ impl AbstractUtxoSet for UtxoSet {
     /// during a reorg.
     fn roll_forward_on_fork(&mut self, block: &Box<dyn RawBlock>) {
         block.get_transactions().par_iter().for_each(|tx| {
-            tx.get_outputs().iter().enumerate().for_each(|(index, output)| {
-                let output_id = OutputIdProto::new(*tx.get_hash(), index as u32);
-                self.status_map
-                    .entry(output_id)
-                    .and_modify(|output_spent_status: &mut SlipSpentStatus| {
-                        output_spent_status
-                            .fork_statuses
-                            .insert(*block.get_hash(), ForkSpentStatus::ForkUnspent);
-                    })
-                    .or_insert(SlipSpentStatus::new_on_fork(
-                        output.clone(),
-                        *block.get_hash(),
-                    ));
-            });
+            tx.get_outputs()
+                .iter()
+                .enumerate()
+                .for_each(|(index, output)| {
+                    let output_id = OutputIdProto::new(*tx.get_hash(), index as u32);
+                    self.status_map
+                        .entry(output_id)
+                        .and_modify(|output_spent_status: &mut SlipSpentStatus| {
+                            output_spent_status
+                                .fork_statuses
+                                .insert(*block.get_hash(), ForkSpentStatus::ForkUnspent);
+                        })
+                        .or_insert(SlipSpentStatus::new_on_fork(
+                            output.clone(),
+                            *block.get_hash(),
+                        ));
+                });
             // loop through inputs and mark them as ForkSpent
             tx.get_inputs().iter().for_each(|input| {
                 self.status_map.entry(input.clone()).and_modify(
@@ -439,10 +450,9 @@ impl AbstractUtxoSet for UtxoSet {
         if output_ids.is_empty() {
             None
         } else {
-            // TODO coudlnt' this just be a map().reduce()???
             output_ids
                 .iter()
-                .map(|input| self.output_status_from_output_id(input))
+                .map(|input| self.output_from_output_id(input))
                 .collect::<Option<Vec<OutputProto>>>()
                 .map(|outputs| outputs.iter().map(|output| output.amount()).sum())
         }
@@ -457,7 +467,7 @@ impl AbstractUtxoSet for UtxoSet {
             None
         } else if let Some(outputs) = output_ids
             .iter()
-            .map(|input| self.output_status_from_output_id(input))
+            .map(|input| self.output_from_output_id(input))
             .collect::<Option<Vec<OutputProto>>>()
         {
             if outputs
@@ -473,27 +483,21 @@ impl AbstractUtxoSet for UtxoSet {
         }
     }
     /// This is used to get the Output(`OutputProto`) which corresponds to a given Input(`OutputIdProto`)
-    fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto> {
+    fn output_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto> {
         // TODO get rid of the clone here...?
+        // This is very difficult. We'd prefer to return an Option<&OutputProto> but Rusts lifetimes
+        // make it very tricky... I'm not sure what is the best solution here...
         match self.status_map.get(output_id) {
             Some(output_status) => Some(output_status.output_status.clone()),
             None => None,
         }
     }
-    // pub fn output_status_from_output_id(&self, output_id: &OutputIdProto) -> &OutputProto {
-    //     // match self.status_map.get(output_id) {
-    //     //     Some(output_status) => Some(&output_status.output_status),
-    //     //     None => None,
-    //     // }
-    //     &self.status_map.get(output_id).unwrap().output_status
-    // }
-
     /// Computes the fee(leftover of output amount - input amount) for a given unspent transaction.
     fn transaction_fees(&self, tx: &TransactionProto) -> u64 {
         let input_amt: u64 = tx
             .inputs
             .iter()
-            .map(|input| self.output_status_from_output_id(input).unwrap().amount())
+            .map(|input| self.output_from_output_id(input).unwrap().amount())
             .sum();
 
         let output_amt: u64 = tx.outputs.iter().map(|output| output.amount()).sum();
@@ -521,7 +525,8 @@ mod test {
         panda_protos::transaction_proto::TxType,
         test_utilities::{
             globals_init::make_timestamp_generator_for_test, mock_block::MockRawBlockForUTXOSet,
-        }, transaction::Transaction,
+        },
+        transaction::Transaction,
     };
 
     #[tokio::test]
@@ -927,7 +932,7 @@ mod test {
 
         //let output = utxo_set.output_status_from_output_id(&inputs[0]);
         for i in 0..4 {
-            let output = utxo_set.output_status_from_output_id(&inputs[i]).unwrap();
+            let output = utxo_set.output_from_output_id(&inputs[i]).unwrap();
             assert_eq!(outputs[i], output);
         }
     }
@@ -966,7 +971,8 @@ mod test {
                 signature: vec![0; 64],
             };
 
-            let input_for_spent_output = OutputIdProto::new(block_1_tx.hash().try_into().unwrap(), 0);
+            let input_for_spent_output =
+                OutputIdProto::new(block_1_tx.hash().try_into().unwrap(), 0);
             let block_2_tx = TransactionProto {
                 timestamp: timestamp_generator.get_timestamp(),
                 inputs: vec![input_for_spent_output],
@@ -975,7 +981,7 @@ mod test {
                 message: vec![],
                 signature: vec![0; 64],
             };
-            
+
             // Transaction::new(
             //     timestamp_generator.get_timestamp(),
             //     vec![input_for_spent_output],
@@ -987,8 +993,11 @@ mod test {
             block_2_txs.push(block_2_tx);
         }
 
-        let mock_block_1: Box<dyn RawBlock> =
-            Box::new(MockRawBlockForUTXOSet::new(1, [1; 32], Transaction::transform_transaction_protos(block_1_txs)));
+        let mock_block_1: Box<dyn RawBlock> = Box::new(MockRawBlockForUTXOSet::new(
+            1,
+            [1; 32],
+            Transaction::transform_transaction_protos(block_1_txs),
+        ));
 
         utxo_set.roll_forward(&mock_block_1);
 

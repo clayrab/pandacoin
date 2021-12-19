@@ -79,7 +79,7 @@ impl PandaBlock {
             hash,
             fee: block_fees,
             block_proto,
-            transactions: vec![]
+            transactions: vec![],
         }
     }
 

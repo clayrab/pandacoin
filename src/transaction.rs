@@ -2,13 +2,13 @@ use crate::crypto::{hash_bytes, sign_message};
 use crate::panda_protos::transaction_proto::TxType;
 use crate::panda_protos::TransactionProto;
 use crate::panda_protos::{OutputIdProto, OutputProto};
-use crate::types::{Sha256Hash, Secp256k1SignatureCompact};
+use crate::types::{Secp256k1SignatureCompact, Sha256Hash};
 use prost::Message;
 use secp256k1::SecretKey;
-use std::convert::{TryInto, TryFrom};
+use std::convert::{TryFrom, TryInto};
 use std::io::Cursor;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Transaction {
     hash: Sha256Hash,
     transaction_proto: TransactionProto,
@@ -31,10 +31,10 @@ impl Transaction {
             outputs,
             txtype: txtype as i32,
             message,
-            signature: signature,
+            signature,
         };
         let hash = transaction_proto.hash().try_into().unwrap();
-        let sig = transaction_proto.sign(&secret_key);
+        let sig = transaction_proto.sign(secret_key);
         transaction_proto.set_signature(sig);
         Transaction {
             hash,
@@ -48,10 +48,13 @@ impl Transaction {
             transaction_proto,
         }
     }
-    pub fn transform_transaction_protos(transaction_protos: Vec<TransactionProto>) -> Vec<Transaction> {
-        transaction_protos.into_iter().map(|transaction_proto| {
-            Transaction::from_proto(transaction_proto)
-        }).collect()
+    pub fn transform_transaction_protos(
+        transaction_protos: Vec<TransactionProto>,
+    ) -> Vec<Transaction> {
+        transaction_protos
+            .into_iter()
+            .map(Transaction::from_proto)
+            .collect()
     }
     pub fn get_hash(&self) -> &Sha256Hash {
         //&self.hash.unwrap().try_into().unwrap()
@@ -86,9 +89,9 @@ impl TransactionProto {
         hash_bytes(&self.serialize()).to_vec()
     }
     pub fn sign(&self, secret_key: &SecretKey) -> Secp256k1SignatureCompact {
-        assert_eq!(self.signature, [0;64]);
-        let sig = sign_message(&self.serialize(), secret_key);
-        sig
+        assert_eq!(self.signature, [0; 64]);
+
+        sign_message(&self.serialize(), secret_key)
     }
     pub fn set_signature(&mut self, signature: Secp256k1SignatureCompact) {
         self.signature = signature.try_into().unwrap();

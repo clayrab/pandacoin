@@ -13,7 +13,7 @@ use pandacoin::shutdown_signals::signal_for_shutdown;
 use pandacoin::timestamp_generator::{AbstractTimestampGenerator, SystemTimestampGenerator};
 use std::env;
 use std::sync::Arc;
-use tokio::sync::{RwLock, broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, RwLock};
 use tracing::{event, Level};
 
 use pandacoin::blockchain::Blockchain;
@@ -27,7 +27,7 @@ pub async fn main() -> pandacoin::Result<()> {
     // Initialize all "globals", timestamp generator, command line opts, keypair store, utxoset, blockchain, etc
     let constants = Arc::new(Constants::new());
     let (shutdown_channel_sender, shutdown_channel_receiver) = broadcast::channel(1);
-    let (shutdown_waiting_sender , mut shutdown_waiting_receiver) = mpsc::channel::<()>(1);
+    let (shutdown_waiting_sender, mut shutdown_waiting_receiver) = mpsc::channel::<()>(1);
     let timestamp_generator = Box::new(SystemTimestampGenerator::new());
     let command_line_opts = Arc::new(CommandLineOpts::parse());
     let keypair_store = KeypairStore::new(command_line_opts.clone());
@@ -55,30 +55,35 @@ pub async fn main() -> pandacoin::Result<()> {
 
     let longest_chain_queue = LongestChainQueue::new(&genesis_block);
     let fork_manager = ForkManager::new(&genesis_block, constants.clone());
-    let block_fee_manager = BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
+    let block_fee_manager = BlockFeeManager::new(constants.clone());
     let blocks_database = BlocksDatabase::new(genesis_block);
     let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
         Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
 
+    let mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
+        Arc::new(RwLock::new(Box::new(
+            Mempool::new(
+                utxoset_ref.clone(),
+                shutdown_channel_receiver,
+                shutdown_waiting_sender.clone(),
+            )
+            .await,
+        )));
     let _blockchain_mutex_ref = Arc::new(RwLock::new(Box::new(
         Blockchain::new(
             fork_manager,
             longest_chain_queue,
             blocks_database,
             block_fee_manager,
+            constants.clone(),
             utxoset_ref.clone(),
+            mempool_ref.clone(),
         )
         .await,
     )));
-    let mempool_mutex_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
-        Arc::new(RwLock::new(Box::new(Mempool::new(
-            utxoset_ref.clone(),
-            shutdown_channel_receiver,
-            shutdown_waiting_sender.clone(),
-        ).await)));
     let _miniblock_manager_mutex_ref = Arc::new(RwLock::new(Box::new(MiniblockManager::new(
         utxoset_ref.clone(),
-        mempool_mutex_ref.clone(),
+        mempool_ref.clone(),
     ))));
 
     println!("WELCOME TO PANDACOIN!");
@@ -97,30 +102,29 @@ pub async fn main() -> pandacoin::Result<()> {
     println!("Key: {}", keypair_store.get_keypair().get_public_key());
 
     // Run whatever tasks compose the application
-    tokio::spawn(async move {
-        run()
-    });
+    tokio::spawn(async move { run() });
 
     // Wait for a shutdown signal
     match signal_for_shutdown().await {
         Ok(()) => {
             println!("Shutting down");
-        },
+        }
         Err(err) => {
             eprintln!("Unable to listen for shutdown signal: {}", err);
             // we also shut down in case of error
-        },
+        }
     }
+
     // The shutdown signal has been received, send a shutdown message to each async task
     let _res = shutdown_channel_sender.send(());
-    
+
     // Wait for everyone to shutdown gracefully! We do this by dropping the reference
     // to the waiting_sender, the recv() will then throw an error when the last reference
-    // to the sender is dropped. Each async task should hold a reference to the sender so that 
+    // to the sender is dropped. Each async task should hold a reference to the sender so that
     // this works properly. See https://tokio.rs/tokio/topics/shutdown for details.
     drop(shutdown_waiting_sender);
     let _ = shutdown_waiting_receiver.recv().await;
-    
+
     println!("Shutdown Complete");
     Ok(())
 }

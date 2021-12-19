@@ -5,7 +5,7 @@ pub use secp256k1::{Message, PublicKey, Signature, SECP256K1};
 use sha2::{Digest, Sha256};
 use std::convert::TryInto;
 
-use crate::types::{Sha256Hash, Secp256k1SignatureCompact};
+use crate::types::{Secp256k1SignatureCompact, Sha256Hash};
 pub const PARALLEL_HASH_BYTE_THRESHOLD: usize = 128_000;
 
 /// Hash the message string with sha256 for signing by secp256k1 and return as byte array
@@ -38,7 +38,7 @@ pub fn hash_bytes(data: &[u8]) -> Sha256Hash {
 
 pub fn sign_message(message_bytes: &[u8], secret_key: &SecretKey) -> Secp256k1SignatureCompact {
     let msg = Message::from_slice(&make_message(message_bytes)).unwrap();
-    let sig = SECP256K1.sign(&msg, &secret_key);
+    let sig = SECP256K1.sign(&msg, secret_key);
     sig.serialize_compact()
 }
 
@@ -102,11 +102,18 @@ mod test {
             "asdf",
         ]));
         let keypair_store = KeypairStore::new_mock(command_line_opts);
-        
-        let msg = [0,1,2,3];
-        let signature = sign_message(&msg, keypair_store.get_keypair().get_secret_key());
-        let is_valid = verify_bytes_message(&msg, &signature.to_vec(), &keypair_store.get_keypair().get_public_key().serialize().to_vec());
-        assert!(is_valid);
 
+        let msg = [0, 1, 2, 3];
+        let signature = sign_message(&msg, keypair_store.get_keypair().get_secret_key());
+        let is_valid = verify_bytes_message(
+            &msg,
+            &signature.to_vec(),
+            &keypair_store
+                .get_keypair()
+                .get_public_key()
+                .serialize()
+                .to_vec(),
+        );
+        assert!(is_valid);
     }
 }

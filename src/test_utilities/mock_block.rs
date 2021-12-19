@@ -1,4 +1,4 @@
-use crate::{block::RawBlock, types::Sha256Hash, transaction::Transaction};
+use crate::{block::RawBlock, transaction::Transaction, types::Sha256Hash};
 
 /// This Mock RawBlock is used for testing Block Fee
 #[derive(Debug)]
