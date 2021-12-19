@@ -12,18 +12,17 @@ message OutputProto {
 }
 
 message TransactionProto {
-    optional bytes hash = 1;
-    uint64 timestamp = 2;
-    repeated OutputIDProto inputs = 3;
-    repeated OutputProto outputs = 4;
+    uint64 timestamp = 1;
+    repeated OutputIDProto inputs = 2;
+    repeated OutputProto outputs = 3;
     enum TxType {
         NORMAL = 0;
         SEED = 1;
         SERVICE = 2;
     }
-    TxType txtype = 5;
-    bytes message = 6;
-    bytes signature = 7;
+    TxType txtype = 4;
+    bytes message = 5;
+    bytes signature = 6;
 }
 
 message RawBlockProto {

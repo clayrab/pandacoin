@@ -12,10 +12,6 @@ pub struct BlockFeeManagerContext {
 ///
 #[derive(Debug)]
 pub struct BlockFeeManager {
-    timestamps: Vec<u64>,
-    block_fees: Vec<u64>,
-    total_fees: u64,
-    genesis_block_timestamp: u64,
     context: BlockFeeManagerContext,
 }
 
@@ -27,14 +23,9 @@ pub struct BlockFeeAggregateForkData {
 }
 impl BlockFeeAggregateForkData {
     pub fn new(block: &Box<dyn RawBlock>) -> Self {
-        let mut timestamps = VecDeque::new();
-        let mut block_fees = VecDeque::new();
-        timestamps.push_back(block.get_timestamp());
-        block_fees.push_back(block.get_block_fee());
-        // TODO use VecDeque::from
         BlockFeeAggregateForkData {
-            timestamps,
-            block_fees,
+            timestamps: VecDeque::from([block.get_timestamp()]),
+            block_fees: VecDeque::from([block.get_block_fee()]),
             total_fees: block.get_block_fee(),
         }
     }
@@ -74,12 +65,8 @@ impl BlockFeeAggregateForkData {
 }
 
 impl BlockFeeManager {
-    pub fn new(constants: Arc<Constants>, genesis_block_timestamp: u64) -> Self {
+    pub fn new(constants: Arc<Constants>) -> Self {
         BlockFeeManager {
-            timestamps: vec![],
-            block_fees: vec![],
-            total_fees: 0,
-            genesis_block_timestamp,
             context: BlockFeeManagerContext { constants },
         }
     }
@@ -97,7 +84,6 @@ impl BlockFeeManager {
         let last_block = blocks_database
             .get_block_by_hash(&next_block.get_previous_block_hash())
             .unwrap();
-        //let last_block_id = next_block.get_id() - 1;
         let mut earliest_block_id = 0;
         // we don't subtract 1 here because of fenceposts, we want amount of time passed
         if next_block.get_id()
@@ -281,10 +267,7 @@ mod test {
     async fn block_fee_big_fees_test_new() {
         let timestamp_generator = make_timestamp_generator_for_test();
 
-        let mut block_fee_manager = BlockFeeManager::new(
-            Arc::new(Constants::new()),
-            timestamp_generator.get_timestamp(),
-        );
+        let mut block_fee_manager = BlockFeeManager::new(Arc::new(Constants::new()));
 
         let constants = Arc::new(Constants::new_for_test(
             None,

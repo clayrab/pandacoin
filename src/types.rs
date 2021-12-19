@@ -4,3 +4,4 @@
 pub type PandaAddress = Vec<u8>;
 /// Sha256Hash byte array type
 pub type Sha256Hash = [u8; 32];
+pub type Secp256k1SignatureCompact = [u8; 64];
