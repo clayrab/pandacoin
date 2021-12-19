@@ -32,6 +32,7 @@ pub enum AddBlockEvent {
     AncestorNotFound,
     ParentNotFound,
     InvalidBlock,
+    TooOld,
 }
 
 #[async_trait]
@@ -102,111 +103,119 @@ impl AbstractBlockchain for Blockchain {
     /// Append `Block` to the index of `Blockchain`
     /// These `AddBlockEvent`s will be turned into network responses so peers can figure out
     /// what's going on.
-    // async fn add_block(&mut self, block: RawBlockProto) -> AddBlockEvent {
     async fn add_block(&mut self, block: Box<dyn RawBlock>) -> AddBlockEvent {
-        // TODO blocks cannot be added if they are older than MAX_REORG
         println!(
             "***************** add block ***************** {:?}",
             block.get_hash()
         );
         // TODO: Should we pass a serialized block [u8] to add_block instead of a Block?
-        let is_first_block = block.get_previous_block_hash() == [0u8; 32]
-            && !self.contains_block_hash(&block.get_previous_block_hash());
-        if self.contains_block_hash(block.get_hash()) {
-            AddBlockEvent::AlreadyKnown
-        } else if !is_first_block && !self.contains_block_hash(&block.get_previous_block_hash()) {
-            AddBlockEvent::ParentNotFound
+        if block.get_id() + self.context.constants.get_max_reorg()
+            < self.longest_chain_queue.latest_block_id()
+        {
+            AddBlockEvent::TooOld
         } else {
-            let fork_chains: ForkChains = self.find_fork_chains(&block);
-            if !self.validate_block(&block, &fork_chains).await {
-                AddBlockEvent::InvalidBlock
+            let is_first_block = block.get_previous_block_hash() == [0u8; 32]
+                && !self.contains_block_hash(&block.get_previous_block_hash());
+            if self.contains_block_hash(block.get_hash()) {
+                AddBlockEvent::AlreadyKnown
+            } else if !is_first_block && !self.contains_block_hash(&block.get_previous_block_hash())
+            {
+                AddBlockEvent::ParentNotFound
             } else {
-                self.fork_manager
-                    .roll_forward(&block, &mut self.blocks_database, &self.longest_chain_queue)
-                    .await;
-                let latest_block_hash = self.longest_chain_queue.latest_block_hash();
-                let is_new_lc_tip = latest_block_hash == Some(&block.get_previous_block_hash());
-                if is_first_block || is_new_lc_tip {
-                    // First Block or we'e new tip of the longest chain
-                    self.longest_chain_queue.roll_forward(block.get_hash());
-                    let mut utxoset = self.context.utxoset_ref.write().await;
-                    utxoset.roll_forward(&block);
-                    let mut mempool = self.context.mempool_ref.write().await;
-                    mempool.roll_forward(&block);
-                    // OUTPUT_DB_GLOBAL
-                    //     .clone()
-                    //     .write()
-                    //     .unwrap()
-                    //     .roll_forward(&block.core());
-                    self.roll_forward_max_reorg(&block).await;
-                    self.blocks_database.insert(block);
-
-                    // self.storage.roll_forward(&block).await;
-                    AddBlockEvent::AcceptedAsLongestChain
+                let fork_chains: ForkChains = self.find_fork_chains(&block);
+                if !self.validate_block(&block, &fork_chains).await {
+                    AddBlockEvent::InvalidBlock
                 } else {
-                    // We are not on the longest chain
-                    if self.is_longer_chain(&fork_chains.new_chain, &fork_chains.old_chain) {
-                        assert_eq!(fork_chains.new_chain.len(), fork_chains.old_chain.len() + 1);
+                    self.fork_manager
+                        .roll_forward(&block, &mut self.blocks_database, &self.longest_chain_queue)
+                        .await;
+                    let latest_block_hash = self.longest_chain_queue.latest_block_hash();
+                    let is_new_lc_tip = latest_block_hash == Some(&block.get_previous_block_hash());
+                    if is_first_block || is_new_lc_tip {
+                        // First Block or we'e new tip of the longest chain
+                        self.longest_chain_queue.roll_forward(block.get_hash());
+                        let mut utxoset = self.context.utxoset_ref.write().await;
+                        utxoset.roll_forward(&block);
+                        let mut mempool = self.context.mempool_ref.write().await;
+                        mempool.roll_forward(&block);
+                        // OUTPUT_DB_GLOBAL
+                        //     .clone()
+                        //     .write()
+                        //     .unwrap()
+                        //     .roll_forward(&block.core());
                         self.roll_forward_max_reorg(&block).await;
                         self.blocks_database.insert(block);
-                        // Unwind the old chain
-                        let _result = fork_chains.old_chain.iter().map(|_hash| {
-                            self.longest_chain_queue.roll_back();
-                        });
-                        for block_hash in fork_chains.old_chain.iter().rev() {
-                            let block: &Box<dyn RawBlock> =
-                                self.blocks_database.get_block_by_hash(block_hash).unwrap();
-                            self.longest_chain_queue.roll_back();
-                            let mut utxoset = self.context.utxoset_ref.write().await;
-                            utxoset.roll_back(block);
-                            let mut mempool = self.context.mempool_ref.write().await;
-                            mempool.roll_back(block);
-                            // OUTPUT_DB_GLOBAL
-                            //     .clone()
-                            //     .write()
-                            //     .unwrap()
-                            //     .roll_back(&block.core());
-                            // self.storage.roll_back(&block);
-                        }
 
-                        // Wind up the new chain
-                        for block_hash in fork_chains.new_chain.iter() {
-                            let block: &Box<dyn RawBlock> =
-                                self.blocks_database.get_block_by_hash(block_hash).unwrap();
-                            self.longest_chain_queue.roll_forward(block.get_hash());
-                            let mut utxoset = self.context.utxoset_ref.write().await;
-                            utxoset.roll_forward(block);
-                            let mut mempool = self.context.mempool_ref.write().await;
-                            mempool.roll_forward(block);
-                            // OUTPUT_DB_GLOBAL
-                            //     .clone()
-                            //     .write()
-                            //     .unwrap()
-                            //     .roll_forward(&block.core());
-                            // self.storage.roll_forward(block).await;
-                        }
-                        // Wind the old chain as a fork chain
-                        for block_hash in fork_chains.old_chain.iter() {
-                            let block: &Box<dyn RawBlock> =
-                                self.blocks_database.get_block_by_hash(block_hash).unwrap();
-                            let mut utxoset = self.context.utxoset_ref.write().await;
-                            utxoset.roll_forward_on_fork(block);
-                            // roll_forward_on_fork
-                            //     .clone()
-                            //     .write()
-                            //     .unwrap()
-                            //     .roll_back(&block.core());
-                            // self.storage.roll_back(&block);
-                        }
-
-                        AddBlockEvent::AcceptedAsNewLongestChain
+                        // self.storage.roll_forward(&block).await;
+                        AddBlockEvent::AcceptedAsLongestChain
                     } else {
-                        // we're just building on a new chain. Won't take over... yet!
-                        let mut utxoset = self.context.utxoset_ref.write().await;
-                        utxoset.roll_forward_on_fork(&block);
+                        // We are not on the longest chain
+                        if self.is_longer_chain(&fork_chains.new_chain, &fork_chains.old_chain) {
+                            assert_eq!(
+                                fork_chains.new_chain.len(),
+                                fork_chains.old_chain.len() + 1
+                            );
+                            self.roll_forward_max_reorg(&block).await;
+                            self.blocks_database.insert(block);
+                            // Unwind the old chain
+                            let _result = fork_chains.old_chain.iter().map(|_hash| {
+                                self.longest_chain_queue.roll_back();
+                            });
+                            for block_hash in fork_chains.old_chain.iter().rev() {
+                                let block: &Box<dyn RawBlock> =
+                                    self.blocks_database.get_block_by_hash(block_hash).unwrap();
+                                self.longest_chain_queue.roll_back();
+                                let mut utxoset = self.context.utxoset_ref.write().await;
+                                utxoset.roll_back(block);
+                                let mut mempool = self.context.mempool_ref.write().await;
+                                mempool.roll_back(block);
+                                // OUTPUT_DB_GLOBAL
+                                //     .clone()
+                                //     .write()
+                                //     .unwrap()
+                                //     .roll_back(&block.core());
+                                // self.storage.roll_back(&block);
+                            }
 
-                        self.blocks_database.insert(block);
-                        AddBlockEvent::Accepted
+                            // Wind up the new chain
+                            for block_hash in fork_chains.new_chain.iter() {
+                                let block: &Box<dyn RawBlock> =
+                                    self.blocks_database.get_block_by_hash(block_hash).unwrap();
+                                self.longest_chain_queue.roll_forward(block.get_hash());
+                                let mut utxoset = self.context.utxoset_ref.write().await;
+                                utxoset.roll_forward(block);
+                                let mut mempool = self.context.mempool_ref.write().await;
+                                mempool.roll_forward(block);
+                                // OUTPUT_DB_GLOBAL
+                                //     .clone()
+                                //     .write()
+                                //     .unwrap()
+                                //     .roll_forward(&block.core());
+                                // self.storage.roll_forward(block).await;
+                            }
+                            // Wind the old chain as a fork chain
+                            for block_hash in fork_chains.old_chain.iter() {
+                                let block: &Box<dyn RawBlock> =
+                                    self.blocks_database.get_block_by_hash(block_hash).unwrap();
+                                let mut utxoset = self.context.utxoset_ref.write().await;
+                                utxoset.roll_forward_on_fork(block);
+                                // roll_forward_on_fork
+                                //     .clone()
+                                //     .write()
+                                //     .unwrap()
+                                //     .roll_back(&block.core());
+                                // self.storage.roll_back(&block);
+                            }
+
+                            AddBlockEvent::AcceptedAsNewLongestChain
+                        } else {
+                            // we're just building on a new chain. Won't take over... yet!
+                            let mut utxoset = self.context.utxoset_ref.write().await;
+                            utxoset.roll_forward_on_fork(&block);
+
+                            self.blocks_database.insert(block);
+                            AddBlockEvent::Accepted
+                        }
                     }
                 }
             }
@@ -291,7 +300,6 @@ impl Blockchain {
             old_chain.push(*block.get_hash());
             i += 1;
         }
-        // old_chain.push(*block.get_hash());
 
         let root_block = self
             .blocks_database
@@ -445,10 +453,7 @@ impl Blockchain {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use tokio::sync::RwLock;
-
+    use super::{AbstractBlockchain, AddBlockEvent};
     use crate::block::PandaBlock;
     use crate::block_fee_manager::BlockFeeManager;
     use crate::blocks_database::BlocksDatabase;
@@ -469,8 +474,8 @@ mod tests {
         },
         utxoset::UtxoSet,
     };
-
-    use super::{AbstractBlockchain, AddBlockEvent};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
 
     fn _teardown() -> std::io::Result<()> {
         let dir_path = String::from("data/test/blocks/");
@@ -487,8 +492,6 @@ mod tests {
 
     #[tokio::test]
     async fn build_new_chain_test() {
-        //let timestamp_generator = make_timestamp_generator_for_test();
-
         let constants = Arc::new(Constants::new());
         let keypair = Keypair::new();
         let genesis_block = PandaBlock::new_genesis_block(*keypair.get_public_key(), 0, 1);
@@ -612,7 +615,16 @@ mod tests {
     async fn double_spend_on_fork_test() {
         let timestamp_generator = make_timestamp_generator_for_test();
 
-        let constants = Arc::new(Constants::new());
+        let constants = Arc::new(Constants::new_for_test(
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(5),
+            None,
+        ));
+
         let keypair = Keypair::new();
 
         // object under test
@@ -829,6 +841,18 @@ mod tests {
 
         let result: AddBlockEvent = blockchain.add_block(mock_block_5).await;
         assert_eq!(result, AddBlockEvent::AcceptedAsNewLongestChain);
+
+        let mock_block_old: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
+            0,
+            1000,
+            [20; 32],
+            [0; 32],
+            timestamp_generator.get_timestamp(),
+            vec![],
+        ));
+
+        let result: AddBlockEvent = blockchain.add_block(mock_block_old).await;
+        assert_eq!(result, AddBlockEvent::TooOld);
 
         // teardown().expect("Teardown failed");
     }

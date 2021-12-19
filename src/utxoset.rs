@@ -982,13 +982,6 @@ mod test {
                 signature: vec![0; 64],
             };
 
-            // Transaction::new(
-            //     timestamp_generator.get_timestamp(),
-            //     vec![input_for_spent_output],
-            //     vec![outputs[i].clone()],
-            //     TxType::Normal,
-            //     vec![],
-            // );
             block_1_txs.push(block_1_tx);
             block_2_txs.push(block_2_tx);
         }
