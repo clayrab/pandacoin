@@ -1014,13 +1014,6 @@
 <span id="1014">1014</span>
 <span id="1015">1015</span>
 <span id="1016">1016</span>
-<span id="1017">1017</span>
-<span id="1018">1018</span>
-<span id="1019">1019</span>
-<span id="1020">1020</span>
-<span id="1021">1021</span>
-<span id="1022">1022</span>
-<span id="1023">1023</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">dashmap::mapref::entry::Entry</span>;
 <span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IndexedParallelIterator</span>, <span class="ident">IntoParallelRefIterator</span>, <span class="ident">ParallelIterator</span>};
@@ -2005,13 +1998,6 @@
                 <span class="ident">signature</span>: <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">64</span>],
             };
 
-            <span class="comment">// Transaction::new(</span>
-            <span class="comment">//     timestamp_generator.get_timestamp(),</span>
-            <span class="comment">//     vec![input_for_spent_output],</span>
-            <span class="comment">//     vec![outputs[i].clone()],</span>
-            <span class="comment">//     TxType::Normal,</span>
-            <span class="comment">//     vec![],</span>
-            <span class="comment">// );</span>
             <span class="ident">block_1_txs</span>.<span class="ident">push</span>(<span class="ident">block_1_tx</span>);
             <span class="ident">block_2_txs</span>.<span class="ident">push</span>(<span class="ident">block_2_tx</span>);
         }
