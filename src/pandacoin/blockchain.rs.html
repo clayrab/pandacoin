@@ -786,6 +786,53 @@
 <span id="786">786</span>
 <span id="787">787</span>
 <span id="788">788</span>
+<span id="789">789</span>
+<span id="790">790</span>
+<span id="791">791</span>
+<span id="792">792</span>
+<span id="793">793</span>
+<span id="794">794</span>
+<span id="795">795</span>
+<span id="796">796</span>
+<span id="797">797</span>
+<span id="798">798</span>
+<span id="799">799</span>
+<span id="800">800</span>
+<span id="801">801</span>
+<span id="802">802</span>
+<span id="803">803</span>
+<span id="804">804</span>
+<span id="805">805</span>
+<span id="806">806</span>
+<span id="807">807</span>
+<span id="808">808</span>
+<span id="809">809</span>
+<span id="810">810</span>
+<span id="811">811</span>
+<span id="812">812</span>
+<span id="813">813</span>
+<span id="814">814</span>
+<span id="815">815</span>
+<span id="816">816</span>
+<span id="817">817</span>
+<span id="818">818</span>
+<span id="819">819</span>
+<span id="820">820</span>
+<span id="821">821</span>
+<span id="822">822</span>
+<span id="823">823</span>
+<span id="824">824</span>
+<span id="825">825</span>
+<span id="826">826</span>
+<span id="827">827</span>
+<span id="828">828</span>
+<span id="829">829</span>
+<span id="830">830</span>
+<span id="831">831</span>
+<span id="832">832</span>
+<span id="833">833</span>
+<span id="834">834</span>
+<span id="835">835</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">futures::StreamExt</span>;
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
@@ -793,10 +840,13 @@
 <span class="kw">use</span> <span class="ident">tokio::sync::RwLock</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::blocks_database::BlocksDatabase</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::constants::Constants</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::crypto::verify_bytes_message</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::fork_manager::ForkManager</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::longest_chain_queue::LongestChainQueue</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos::TransactionProto</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::mempool::AbstractMempool</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos::transaction_proto::TxType</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transaction::Transaction</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::types::Sha256Hash</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utxoset::AbstractUtxoSet</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Error</span>;
@@ -838,10 +888,11 @@
 <span class="doccomment">/// blockchain itself, including the blocks that are on the</span>
 <span class="doccomment">/// longest-chain as well as the blocks that is sitting off</span>
 <span class="doccomment">/// the longest-chain but capable of being switched over.</span>
-
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">BlockchainContext</span> {
+    <span class="ident">constants</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Constants</span><span class="op">&gt;</span>,
     <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -888,6 +939,7 @@
     <span class="doccomment">/// what&#39;s going on.</span>
     <span class="comment">// async fn add_block(&amp;mut self, block: RawBlockProto) -&gt; AddBlockEvent {</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">AddBlockEvent</span> {
+        <span class="comment">// TODO blocks cannot be added if they are older than MAX_REORG</span>
         <span class="macro">println!</span>(
             <span class="string">&quot;***************** add block ***************** {:?}&quot;</span>,
             <span class="ident">block</span>.<span class="ident">get_hash</span>()
@@ -914,17 +966,23 @@
                     <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>());
                     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
                     <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                    <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
                     <span class="comment">// OUTPUT_DB_GLOBAL</span>
                     <span class="comment">//     .clone()</span>
                     <span class="comment">//     .write()</span>
                     <span class="comment">//     .unwrap()</span>
                     <span class="comment">//     .roll_forward(&amp;block.core());</span>
+                    <span class="self">self</span>.<span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>).<span class="kw">await</span>;
                     <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">block</span>);
+
                     <span class="comment">// self.storage.roll_forward(&amp;block).await;</span>
                     <span class="ident">AddBlockEvent::AcceptedAsLongestChain</span>
                 } <span class="kw">else</span> {
                     <span class="comment">// We are not on the longest chain</span>
                     <span class="kw">if</span> <span class="self">self</span>.<span class="ident">is_longer_chain</span>(<span class="kw-2">&amp;</span><span class="ident">fork_chains</span>.<span class="ident">new_chain</span>, <span class="kw-2">&amp;</span><span class="ident">fork_chains</span>.<span class="ident">old_chain</span>) {
+                        <span class="macro">assert_eq!</span>(<span class="ident">fork_chains</span>.<span class="ident">new_chain</span>.<span class="ident">len</span>(), <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>);
+                        <span class="self">self</span>.<span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>).<span class="kw">await</span>;
                         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">block</span>);
                         <span class="comment">// Unwind the old chain</span>
                         <span class="kw">let</span> <span class="ident">_result</span> <span class="op">=</span> <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">_hash</span><span class="op">|</span> {
@@ -936,6 +994,8 @@
                             <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_back</span>();
                             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
                             <span class="ident">utxoset</span>.<span class="ident">roll_back</span>(<span class="ident">block</span>);
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                            <span class="ident">mempool</span>.<span class="ident">roll_back</span>(<span class="ident">block</span>);
                             <span class="comment">// OUTPUT_DB_GLOBAL</span>
                             <span class="comment">//     .clone()</span>
                             <span class="comment">//     .write()</span>
@@ -951,6 +1011,8 @@
                             <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>());
                             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
                             <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>);
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                            <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>);
                             <span class="comment">// OUTPUT_DB_GLOBAL</span>
                             <span class="comment">//     .clone()</span>
                             <span class="comment">//     .write()</span>
@@ -994,17 +1056,34 @@
         <span class="ident">longest_chain_queue</span>: <span class="ident">LongestChainQueue</span>,
         <span class="ident">blocks_database</span>: <span class="ident">BlocksDatabase</span>,
         <span class="ident">block_fee_manager</span>: <span class="ident">BlockFeeManager</span>,
+        <span class="ident">constants</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Constants</span><span class="op">&gt;</span>,
         <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="ident">Blockchain</span> {
             <span class="ident">longest_chain_queue</span>,
             <span class="ident">blocks_database</span>,
             <span class="ident">fork_manager</span>,
             <span class="ident">block_fee_manager</span>,
-            <span class="ident">context</span>: <span class="ident">BlockchainContext</span> { <span class="ident">utxoset_ref</span> },
+            <span class="ident">context</span>: <span class="ident">BlockchainContext</span> {
+                <span class="ident">constants</span>,
+                <span class="ident">utxoset_ref</span>,
+                <span class="ident">mempool_ref</span>,
+            },
         }
     }
-
+    <span class="doccomment">///</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">current_block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
+        <span class="kw">if</span> <span class="ident">current_block</span>.<span class="ident">get_id</span>() <span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">constants</span>.<span class="ident">get_max_reorg</span>() {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+            <span class="ident">mempool</span>.<span class="ident">roll_forward_max_reorg</span>(
+                <span class="self">self</span>.<span class="ident">get_block_by_id</span>(
+                    <span class="ident">current_block</span>.<span class="ident">get_id</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">constants</span>.<span class="ident">get_max_reorg</span>(),
+                )
+                .<span class="ident">unwrap</span>(),
+            );
+        }
+    }
     <span class="doccomment">/// If the block is in the fork</span>
     <span class="kw">fn</span> <span class="ident">contains_block_hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">contains_block_hash</span>(<span class="ident">block_hash</span>)
@@ -1125,24 +1204,25 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">validate_transaction</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">previous_block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>,
-        <span class="ident">tx</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionProto</span>,
+        <span class="ident">tx</span>: <span class="kw-2">&amp;</span><span class="ident">Transaction</span>,
         <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
     ) -&gt; <span class="ident">bool</span> {
-        <span class="kw">match</span> <span class="ident">tx</span>.<span class="ident">txtype</span> {
-            <span class="comment">//TxType::Normal =&gt; {</span>
-            <span class="number">0</span> =&gt; {
-                <span class="kw">if</span> <span class="ident">tx</span>.<span class="ident">inputs</span>.<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="ident">tx</span>.<span class="ident">outputs</span>.<span class="ident">is_empty</span>() {
+        <span class="comment">//println!(&quot;validate_transaction type{}&quot;);</span>
+        <span class="kw">match</span> <span class="ident">tx</span>.<span class="ident">get_txtype</span>() {
+            <span class="ident">TxType::Normal</span> =&gt; {
+                <span class="kw">if</span> <span class="ident">tx</span>.<span class="ident">get_inputs</span>().<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="ident">tx</span>.<span class="ident">get_outputs</span>().<span class="ident">is_empty</span>() {
                     <span class="kw">return</span> <span class="bool-val">true</span>;
                 }
                 <span class="kw">let</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">read</span>().<span class="kw">await</span>;
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">address</span>) <span class="op">=</span> <span class="ident">utxoset</span>.<span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="ident">tx</span>.<span class="ident">inputs</span>) {
-                    <span class="kw">if</span> <span class="op">!</span><span class="ident">verify_bytes_message</span>(<span class="ident">tx</span>.<span class="ident">hash</span>(), <span class="ident">tx</span>.<span class="ident">signature</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">address</span>) {
-                        <span class="macro">info!</span>(<span class="string">&quot;tx signature invalid&quot;</span>);
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">address</span>) <span class="op">=</span> <span class="ident">utxoset</span>.<span class="ident">get_receiver_for_inputs</span>(<span class="ident">tx</span>.<span class="ident">get_inputs</span>()) {
+                    <span class="macro">println!</span>(<span class="string">&quot;verify sig {:?}&quot;</span>, <span class="ident">address</span>);
+                    <span class="kw">if</span> <span class="op">!</span><span class="ident">verify_bytes_message</span>(<span class="ident">tx</span>.<span class="ident">get_hash</span>(), <span class="ident">tx</span>.<span class="ident">get_signature</span>(), <span class="kw-2">&amp;</span><span class="ident">address</span>) {
+                        <span class="macro">error!</span>(<span class="string">&quot;tx signature invalid&quot;</span>);
                         <span class="kw">return</span> <span class="bool-val">false</span>;
                     };
                     <span class="comment">// validate our outputs</span>
                     <span class="comment">// TODO: remove this clone?</span>
-                    <span class="kw">let</span> <span class="ident">inputs_iterator_stream</span> <span class="op">=</span> <span class="ident">futures::stream::iter</span>(<span class="kw-2">&amp;</span><span class="ident">tx</span>.<span class="ident">inputs</span>);
+                    <span class="kw">let</span> <span class="ident">inputs_iterator_stream</span> <span class="op">=</span> <span class="ident">futures::stream::iter</span>(<span class="ident">tx</span>.<span class="ident">get_inputs</span>());
                     <span class="kw">let</span> <span class="ident">inputs_are_valid</span> <span class="op">=</span> <span class="ident">inputs_iterator_stream</span>
                         .<span class="ident">all</span>(<span class="op">|</span><span class="ident">input</span><span class="op">|</span> {
                             <span class="kw">if</span> <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">is_empty</span>() {
@@ -1162,17 +1242,13 @@
                     }
                     <span class="comment">// validate that inputs are unspent</span>
                     <span class="kw">let</span> <span class="ident">input_amt</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">tx</span>
-                        .<span class="ident">inputs</span>
+                        .<span class="ident">get_inputs</span>()
                         .<span class="ident">iter</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">input</span><span class="op">|</span> {
-                            <span class="ident">utxoset</span>
-                                .<span class="ident">output_status_from_output_id</span>(<span class="ident">input</span>)
-                                .<span class="ident">unwrap</span>()
-                                .<span class="ident">amount</span>()
-                        })
+                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">input</span><span class="op">|</span> <span class="ident">utxoset</span>.<span class="ident">output_from_output_id</span>(<span class="ident">input</span>).<span class="ident">unwrap</span>().<span class="ident">amount</span>())
                         .<span class="ident">sum</span>();
 
-                    <span class="kw">let</span> <span class="ident">output_1mt</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">outputs</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">output</span><span class="op">|</span> <span class="ident">output</span>.<span class="ident">amount</span>()).<span class="ident">sum</span>();
+                    <span class="kw">let</span> <span class="ident">output_1mt</span>: <span class="ident">u64</span> <span class="op">=</span>
+                        <span class="ident">tx</span>.<span class="ident">get_outputs</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">output</span><span class="op">|</span> <span class="ident">output</span>.<span class="ident">amount</span>()).<span class="ident">sum</span>();
 
                     <span class="kw">let</span> <span class="ident">is_balanced</span> <span class="op">=</span> <span class="ident">output_1mt</span> <span class="op">==</span> <span class="ident">input_amt</span>;
                     <span class="kw">if</span> <span class="op">!</span><span class="ident">is_balanced</span> {
@@ -1184,13 +1260,15 @@
                     <span class="bool-val">false</span>
                 }
             }
-            <span class="number">1</span> =&gt; {
-                <span class="comment">// need to validate the Seed correctly</span>
+            <span class="ident">TxType::Seed</span> =&gt; {
+                <span class="macro">println!</span>(<span class="string">&quot;TxType::Seed&quot;</span>);
+                <span class="comment">// TODO validate Seed tx correctly</span>
                 <span class="bool-val">true</span>
             }
-            <span class="kw">_</span> =&gt; {
-                <span class="macro">error!</span>(<span class="string">&quot;Unknown Transaction Type&quot;</span>);
-                <span class="bool-val">false</span>
+            <span class="ident">TxType::Service</span> =&gt; {
+                <span class="macro">println!</span>(<span class="string">&quot;TxType::Service&quot;</span>);
+                <span class="comment">// TODO validate Service tx correctly</span>
+                <span class="bool-val">true</span>
             }
         }
     }
@@ -1212,12 +1290,15 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::constants::Constants</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::fork_manager::ForkManager</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::longest_chain_queue::LongestChainQueue</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::mempool::AbstractMempool</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::mock_mempool::MockMempool</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transaction::Transaction</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utxoset::AbstractUtxoSet</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">block::RawBlock</span>,
         <span class="ident">blockchain::Blockchain</span>,
         <span class="ident">keypair::Keypair</span>,
-        <span class="ident">panda_protos</span>::{<span class="ident">transaction_proto::TxType</span>, <span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>, <span class="ident">TransactionProto</span>},
+        <span class="ident">panda_protos</span>::{<span class="ident">transaction_proto::TxType</span>, <span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>},
         <span class="ident">test_utilities</span>::{
             <span class="ident">globals_init::make_timestamp_generator_for_test</span>, <span class="ident">mock_block::MockRawBlockForBlockchain</span>,
         },
@@ -1249,11 +1330,12 @@
         <span class="kw">let</span> <span class="ident">genesis_block_hash</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">genesis_block</span>.<span class="ident">get_hash</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">longest_chain_queue</span> <span class="op">=</span> <span class="ident">LongestChainQueue::new</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_block</span>);
         <span class="kw">let</span> <span class="ident">fork_manager</span> <span class="op">=</span> <span class="ident">ForkManager::new</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_block</span>, <span class="ident">constants</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">block_fee_manager</span> <span class="op">=</span>
-            <span class="ident">BlockFeeManager::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>(), <span class="ident">genesis_block</span>.<span class="ident">get_timestamp</span>());
+        <span class="kw">let</span> <span class="ident">block_fee_manager</span> <span class="op">=</span> <span class="ident">BlockFeeManager::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">blocks_database</span> <span class="op">=</span> <span class="ident">BlocksDatabase::new</span>(<span class="ident">genesis_block</span>);
         <span class="kw">let</span> <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">UtxoSet::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>()))));
+        <span class="kw">let</span> <span class="ident">mock_mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
+            <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">MockMempool::new</span>())));
 
         <span class="kw">let</span> <span class="ident">mock_block_1</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">1</span>,
@@ -1336,7 +1418,9 @@
             <span class="ident">longest_chain_queue</span>,
             <span class="ident">blocks_database</span>,
             <span class="ident">block_fee_manager</span>,
+            <span class="ident">constants</span>.<span class="ident">clone</span>(),
             <span class="ident">utxoset_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">mock_mempool_ref</span>.<span class="ident">clone</span>(),
         )
         .<span class="kw">await</span>;
 
@@ -1376,18 +1460,21 @@
 
         <span class="kw">let</span> <span class="ident">longest_chain_queue</span> <span class="op">=</span> <span class="ident">LongestChainQueue::new</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_block</span>);
         <span class="kw">let</span> <span class="ident">fork_manager</span> <span class="op">=</span> <span class="ident">ForkManager::new</span>(<span class="kw-2">&amp;</span><span class="ident">genesis_block</span>, <span class="ident">constants</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">block_fee_manager</span> <span class="op">=</span>
-            <span class="ident">BlockFeeManager::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>(), <span class="ident">genesis_block</span>.<span class="ident">get_timestamp</span>());
+        <span class="kw">let</span> <span class="ident">block_fee_manager</span> <span class="op">=</span> <span class="ident">BlockFeeManager::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>());
         <span class="kw">let</span> <span class="ident">blocks_database</span> <span class="op">=</span> <span class="ident">BlocksDatabase::new</span>(<span class="ident">genesis_block</span>);
         <span class="kw">let</span> <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">UtxoSet::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>()))));
+        <span class="kw">let</span> <span class="ident">mock_mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
+            <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">MockMempool::new</span>())));
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">blockchain</span> <span class="op">=</span> <span class="ident">Blockchain::new</span>(
             <span class="ident">fork_manager</span>,
             <span class="ident">longest_chain_queue</span>,
             <span class="ident">blocks_database</span>,
             <span class="ident">block_fee_manager</span>,
+            <span class="ident">constants</span>.<span class="ident">clone</span>(),
             <span class="ident">utxoset_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">mock_mempool_ref</span>.<span class="ident">clone</span>(),
         )
         .<span class="kw">await</span>;
         <span class="comment">//</span>
@@ -1403,16 +1490,17 @@
         <span class="comment">// block_a has a single output in it</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_1</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
-        <span class="kw">let</span> <span class="ident">seed_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">0</span>; <span class="number">32</span>], <span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">tx_1</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
+        <span class="kw">let</span> <span class="ident">seed_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">1</span>; <span class="number">32</span>], <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">tx_1</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">seed_input</span>],
             <span class="macro">vec!</span>[<span class="ident">output_1</span>],
             <span class="ident">TxType::Seed</span>,
-            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
-        <span class="kw">let</span> <span class="ident">output_1_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">tx_1</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">output_1_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_1</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_1</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">1</span>,
             <span class="number">1000</span>,
@@ -1425,15 +1513,16 @@
         <span class="comment">// block_b spends the output in block_a and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
-        <span class="kw">let</span> <span class="ident">tx_2</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
+        <span class="kw">let</span> <span class="ident">tx_2</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">output_1_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_2</span>],
             <span class="ident">TxType::Normal</span>,
-            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
-        <span class="kw">let</span> <span class="ident">output_2_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">tx_2</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">output_2_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_2</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_2</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">2</span>,
             <span class="number">1000</span>,
@@ -1446,25 +1535,27 @@
         <span class="comment">// block_c spends the output in block_b and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_3</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
-        <span class="kw">let</span> <span class="ident">tx_3</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
+        <span class="kw">let</span> <span class="ident">tx_3</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">output_2_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_3</span>],
             <span class="ident">TxType::Normal</span>,
-            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
 
         <span class="kw">let</span> <span class="ident">output_3_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
         <span class="kw">let</span> <span class="ident">output_3_2_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">tx_3_2</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
+        <span class="kw">let</span> <span class="ident">tx_3_2</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">output_2_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_3_2</span>, <span class="ident">output_3_2_2</span>],
             <span class="ident">TxType::Normal</span>,
-            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
-        <span class="kw">let</span> <span class="ident">output_3_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">tx_3</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">output_3_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_3</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">3</span>,
             <span class="number">1000</span>,
@@ -1476,7 +1567,7 @@
         <span class="comment">// block_c_2 spends the output in block_b and creates a new output</span>
 
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
-        <span class="kw">let</span> <span class="ident">output_3_2_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">tx_3_2</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">output_3_2_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_3_2</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3_2</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">3</span>,
             <span class="number">1000</span>,
@@ -1489,26 +1580,28 @@
         <span class="comment">// block_d spends the output in block_c and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_4</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
-        <span class="kw">let</span> <span class="ident">tx_4</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
+        <span class="kw">let</span> <span class="ident">tx_4</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">output_3_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_4</span>],
             <span class="ident">TxType::Normal</span>,
-            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
         <span class="comment">// block_d_2 spends the output in block_c and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_4_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">tx_4_2</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
+        <span class="kw">let</span> <span class="ident">tx_4_2</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">output_3_2_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_4_2</span>],
             <span class="ident">TxType::Normal</span>,
-            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
 
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
-        <span class="kw">let</span> <span class="ident">output_4_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">tx_4</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">output_4_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_4</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_4</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">4</span>,
             <span class="number">1000</span>,
@@ -1518,7 +1611,7 @@
             <span class="macro">vec!</span>[<span class="ident">tx_4</span>],
         ));
 
-        <span class="kw">let</span> <span class="ident">_output_4_2_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">tx_4_2</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">_output_4_2_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_4_2</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_4_2</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">4</span>,
             <span class="number">1000</span>,
@@ -1531,14 +1624,15 @@
         <span class="comment">// block_e spends the output in block_d and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">1000</span>);
         <span class="kw">let</span> <span class="ident">output_5</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
-        <span class="kw">let</span> <span class="ident">tx_5</span> <span class="op">=</span> <span class="ident">TransactionProto::new</span>(
+        <span class="kw">let</span> <span class="ident">tx_5</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">output_4_input</span>.<span class="ident">clone</span>()],
             <span class="macro">vec!</span>[<span class="ident">output_5</span>],
             <span class="ident">TxType::Normal</span>,
-            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
-        <span class="kw">let</span> <span class="ident">_output_5_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">tx_5</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">_output_5_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_5</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_5</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">5</span>,
             <span class="number">1000</span>,

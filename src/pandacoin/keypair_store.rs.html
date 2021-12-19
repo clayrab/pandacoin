@@ -149,6 +149,8 @@
 <span id="149">149</span>
 <span id="150">150</span>
 <span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
 </pre><pre class="rust"><code><span class="doccomment">/*!
 
 # Keypair Store
@@ -176,7 +178,7 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">KeypairStoreContext</span> {
-    <span class="ident">command_line_opts</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">CommandLineOpts</span><span class="op">&gt;</span>,
+    <span class="ident">_command_line_opts</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">CommandLineOpts</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// This manages a keypair for the user through a CLI. It will encrypt, decrypt, and store a single keypair which the node</span>
@@ -210,18 +212,20 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
 
         <span class="ident">KeypairStore</span> {
             <span class="ident">keypair</span>,
-            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span> { <span class="ident">command_line_opts</span> },
+            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span> {
+                <span class="ident">_command_line_opts</span>: <span class="ident">command_line_opts</span>,
+            },
         }
     }
     <span class="doccomment">/// Create new `KeypairStore` for testing from existing wallet in test data.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_mock</span>(<span class="ident">command_line_opts</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">CommandLineOpts</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_mock</span>(<span class="ident">_command_line_opts</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">CommandLineOpts</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">decrypted_buffer</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>;
         <span class="ident">decrypted_buffer</span> <span class="op">=</span>
             <span class="ident">KeypairStore::read_key_file</span>(<span class="string">&quot;data/test/testwallet&quot;</span>, <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="ident">String::from</span>(<span class="string">&quot;asdf&quot;</span>)));
         <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">Keypair::from_secret_slice</span>(<span class="kw-2">&amp;</span><span class="ident">decrypted_buffer</span>).<span class="ident">unwrap</span>();
         <span class="ident">KeypairStore</span> {
             <span class="ident">keypair</span>,
-            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span> { <span class="ident">command_line_opts</span> },
+            <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span> { <span class="ident">_command_line_opts</span> },
         }
     }
     <span class="doccomment">/// get the keypair</span>

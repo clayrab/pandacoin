@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["MiniblockManager",""]]});
+initSidebarItems({"struct":[["Miniblock",""],["MiniblockManager",""]]});

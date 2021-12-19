@@ -39,7 +39,6 @@
 <span id="39">39</span>
 <span id="40">40</span>
 <span id="41">41</span>
-<span id="42">42</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 <span class="kw">use</span> <span class="ident">std::time</span>::{<span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>};
 
@@ -47,7 +46,6 @@
 <span class="doccomment">/// The default implementation simply wraps the system clock.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AbstractTimestampGenerator</span> {
     <span class="kw">fn</span> <span class="ident">get_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
-        <span class="macro">println!</span>(<span class="string">&quot;GET REAL TIMESTAMP&quot;</span>);
         <span class="ident">SystemTime::now</span>()
             .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
             .<span class="ident">unwrap</span>()
