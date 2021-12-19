@@ -1,4 +1,4 @@
-use crate::{block::RawBlock, panda_protos::TransactionProto, types::Sha256Hash};
+use crate::{block::RawBlock, transaction::Transaction, types::Sha256Hash};
 
 /// This Mock RawBlock is used for testing Block Fee
 #[derive(Debug)]
@@ -8,7 +8,7 @@ pub struct MockRawBlockForBlockFee {
     mock_block_hash: Sha256Hash,
     mock_parent_hash: Sha256Hash,
     timestamp: u64,
-    transactions: Vec<TransactionProto>,
+    transactions: Vec<Transaction>,
 }
 impl MockRawBlockForBlockFee {
     pub fn new(
@@ -44,7 +44,7 @@ impl RawBlock for MockRawBlockForBlockFee {
     fn get_timestamp(&self) -> u64 {
         self.timestamp
     }
-    fn get_transactions(&self) -> &Vec<TransactionProto> {
+    fn get_transactions(&self) -> &Vec<Transaction> {
         &self.transactions
     }
 }
@@ -54,13 +54,13 @@ impl RawBlock for MockRawBlockForBlockFee {
 pub struct MockRawBlockForUTXOSet {
     mock_block_id: u32,
     mock_block_hash: Sha256Hash,
-    transactions: Vec<TransactionProto>,
+    transactions: Vec<Transaction>,
 }
 impl MockRawBlockForUTXOSet {
     pub fn new(
         mock_block_id: u32,
         mock_block_hash: Sha256Hash,
-        transactions: Vec<TransactionProto>,
+        transactions: Vec<Transaction>,
     ) -> Self {
         MockRawBlockForUTXOSet {
             mock_block_id,
@@ -77,7 +77,7 @@ impl RawBlock for MockRawBlockForUTXOSet {
         &self.mock_block_hash
     }
 
-    fn get_transactions(&self) -> &Vec<TransactionProto> {
+    fn get_transactions(&self) -> &Vec<Transaction> {
         &self.transactions
     }
 }
@@ -90,7 +90,7 @@ pub struct MockRawBlockForBlockchain {
     mock_block_hash: Sha256Hash,
     mock_parent_hash: Sha256Hash,
     timestamp: u64,
-    transactions: Vec<TransactionProto>,
+    transactions: Vec<Transaction>,
 }
 impl MockRawBlockForBlockchain {
     pub fn new(
@@ -99,7 +99,7 @@ impl MockRawBlockForBlockchain {
         mock_block_hash: Sha256Hash,
         mock_parent_hash: Sha256Hash,
         timestamp: u64,
-        transactions: Vec<TransactionProto>,
+        transactions: Vec<Transaction>,
     ) -> Self {
         MockRawBlockForBlockchain {
             mock_block_id,
@@ -127,7 +127,7 @@ impl RawBlock for MockRawBlockForBlockchain {
     fn get_block_fee(&self) -> u64 {
         self.mock_block_fee
     }
-    fn get_transactions(&self) -> &Vec<TransactionProto> {
+    fn get_transactions(&self) -> &Vec<Transaction> {
         &self.transactions
     }
 }
@@ -135,7 +135,7 @@ impl RawBlock for MockRawBlockForBlockchain {
 /// This Mock RawBlock is used for testing the blockchain Set
 #[derive(Debug)]
 pub struct MockRawBlockForForkManager {
-    transactions: Vec<TransactionProto>,
+    transactions: Vec<Transaction>,
 }
 impl MockRawBlockForForkManager {
     pub fn new() -> Self {
@@ -146,7 +146,7 @@ impl MockRawBlockForForkManager {
 }
 
 impl RawBlock for MockRawBlockForForkManager {
-    fn get_transactions(&self) -> &Vec<TransactionProto> {
+    fn get_transactions(&self) -> &Vec<Transaction> {
         &self.transactions
     }
 }

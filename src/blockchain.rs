@@ -5,10 +5,13 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::blocks_database::BlocksDatabase;
+use crate::constants::Constants;
 use crate::crypto::verify_bytes_message;
 use crate::fork_manager::ForkManager;
 use crate::longest_chain_queue::LongestChainQueue;
-use crate::panda_protos::TransactionProto;
+use crate::mempool::AbstractMempool;
+use crate::panda_protos::transaction_proto::TxType;
+use crate::transaction::Transaction;
 use crate::types::Sha256Hash;
 use crate::utxoset::AbstractUtxoSet;
 use crate::Error;
@@ -50,10 +53,11 @@ pub struct ForkChains {
 /// blockchain itself, including the blocks that are on the
 /// longest-chain as well as the blocks that is sitting off
 /// the longest-chain but capable of being switched over.
-
 #[derive(Debug)]
 struct BlockchainContext {
+    constants: Arc<Constants>,
     utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
+    mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
 }
 
 #[derive(Debug)]
@@ -100,6 +104,7 @@ impl AbstractBlockchain for Blockchain {
     /// what's going on.
     // async fn add_block(&mut self, block: RawBlockProto) -> AddBlockEvent {
     async fn add_block(&mut self, block: Box<dyn RawBlock>) -> AddBlockEvent {
+        // TODO blocks cannot be added if they are older than MAX_REORG
         println!(
             "***************** add block ***************** {:?}",
             block.get_hash()
@@ -126,17 +131,23 @@ impl AbstractBlockchain for Blockchain {
                     self.longest_chain_queue.roll_forward(block.get_hash());
                     let mut utxoset = self.context.utxoset_ref.write().await;
                     utxoset.roll_forward(&block);
+                    let mut mempool = self.context.mempool_ref.write().await;
+                    mempool.roll_forward(&block);
                     // OUTPUT_DB_GLOBAL
                     //     .clone()
                     //     .write()
                     //     .unwrap()
                     //     .roll_forward(&block.core());
+                    self.roll_forward_max_reorg(&block).await;
                     self.blocks_database.insert(block);
+
                     // self.storage.roll_forward(&block).await;
                     AddBlockEvent::AcceptedAsLongestChain
                 } else {
                     // We are not on the longest chain
                     if self.is_longer_chain(&fork_chains.new_chain, &fork_chains.old_chain) {
+                        assert_eq!(fork_chains.new_chain.len(), fork_chains.old_chain.len() + 1);
+                        self.roll_forward_max_reorg(&block).await;
                         self.blocks_database.insert(block);
                         // Unwind the old chain
                         let _result = fork_chains.old_chain.iter().map(|_hash| {
@@ -148,6 +159,8 @@ impl AbstractBlockchain for Blockchain {
                             self.longest_chain_queue.roll_back();
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_back(block);
+                            let mut mempool = self.context.mempool_ref.write().await;
+                            mempool.roll_back(block);
                             // OUTPUT_DB_GLOBAL
                             //     .clone()
                             //     .write()
@@ -163,6 +176,8 @@ impl AbstractBlockchain for Blockchain {
                             self.longest_chain_queue.roll_forward(block.get_hash());
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_forward(block);
+                            let mut mempool = self.context.mempool_ref.write().await;
+                            mempool.roll_forward(block);
                             // OUTPUT_DB_GLOBAL
                             //     .clone()
                             //     .write()
@@ -206,17 +221,34 @@ impl Blockchain {
         longest_chain_queue: LongestChainQueue,
         blocks_database: BlocksDatabase,
         block_fee_manager: BlockFeeManager,
+        constants: Arc<Constants>,
         utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
+        mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
     ) -> Self {
         Blockchain {
             longest_chain_queue,
             blocks_database,
             fork_manager,
             block_fee_manager,
-            context: BlockchainContext { utxoset_ref },
+            context: BlockchainContext {
+                constants,
+                utxoset_ref,
+                mempool_ref,
+            },
         }
     }
-
+    ///
+    async fn roll_forward_max_reorg(&self, current_block: &Box<dyn RawBlock>) {
+        if current_block.get_id() > self.context.constants.get_max_reorg() {
+            let mut mempool = self.context.mempool_ref.write().await;
+            mempool.roll_forward_max_reorg(
+                self.get_block_by_id(
+                    current_block.get_id() - self.context.constants.get_max_reorg(),
+                )
+                .unwrap(),
+            );
+        }
+    }
     /// If the block is in the fork
     fn contains_block_hash(&self, block_hash: &Sha256Hash) -> bool {
         self.blocks_database.contains_block_hash(block_hash)
@@ -337,24 +369,25 @@ impl Blockchain {
     async fn validate_transaction(
         &self,
         previous_block: &Box<dyn RawBlock>,
-        tx: &TransactionProto,
+        tx: &Transaction,
         fork_chains: &ForkChains,
     ) -> bool {
-        match tx.txtype {
-            //TxType::Normal => {
-            0 => {
-                if tx.inputs.is_empty() && tx.outputs.is_empty() {
+        //println!("validate_transaction type{}");
+        match tx.get_txtype() {
+            TxType::Normal => {
+                if tx.get_inputs().is_empty() && tx.get_outputs().is_empty() {
                     return true;
                 }
                 let utxoset = self.context.utxoset_ref.read().await;
-                if let Some(address) = utxoset.get_receiver_for_inputs(&tx.inputs) {
-                    if !verify_bytes_message(tx.hash(), tx.signature.clone(), &address) {
-                        info!("tx signature invalid");
+                if let Some(address) = utxoset.get_receiver_for_inputs(tx.get_inputs()) {
+                    println!("verify sig {:?}", address);
+                    if !verify_bytes_message(tx.get_hash(), tx.get_signature(), &address) {
+                        error!("tx signature invalid");
                         return false;
                     };
                     // validate our outputs
                     // TODO: remove this clone?
-                    let inputs_iterator_stream = futures::stream::iter(&tx.inputs);
+                    let inputs_iterator_stream = futures::stream::iter(tx.get_inputs());
                     let inputs_are_valid = inputs_iterator_stream
                         .all(|input| {
                             if fork_chains.old_chain.is_empty() {
@@ -374,17 +407,13 @@ impl Blockchain {
                     }
                     // validate that inputs are unspent
                     let input_amt: u64 = tx
-                        .inputs
+                        .get_inputs()
                         .iter()
-                        .map(|input| {
-                            utxoset
-                                .output_status_from_output_id(input)
-                                .unwrap()
-                                .amount()
-                        })
+                        .map(|input| utxoset.output_from_output_id(input).unwrap().amount())
                         .sum();
 
-                    let output_1mt: u64 = tx.outputs.iter().map(|output| output.amount()).sum();
+                    let output_1mt: u64 =
+                        tx.get_outputs().iter().map(|output| output.amount()).sum();
 
                     let is_balanced = output_1mt == input_amt;
                     if !is_balanced {
@@ -396,13 +425,15 @@ impl Blockchain {
                     false
                 }
             }
-            1 => {
-                // need to validate the Seed correctly
+            TxType::Seed => {
+                println!("TxType::Seed");
+                // TODO validate Seed tx correctly
                 true
             }
-            _ => {
-                error!("Unknown Transaction Type");
-                false
+            TxType::Service => {
+                println!("TxType::Service");
+                // TODO validate Service tx correctly
+                true
             }
         }
     }
@@ -424,12 +455,15 @@ mod tests {
     use crate::constants::Constants;
     use crate::fork_manager::ForkManager;
     use crate::longest_chain_queue::LongestChainQueue;
+    use crate::mempool::AbstractMempool;
+    use crate::test_utilities::mock_mempool::MockMempool;
+    use crate::transaction::Transaction;
     use crate::utxoset::AbstractUtxoSet;
     use crate::{
         block::RawBlock,
         blockchain::Blockchain,
         keypair::Keypair,
-        panda_protos::{transaction_proto::TxType, OutputIdProto, OutputProto, TransactionProto},
+        panda_protos::{transaction_proto::TxType, OutputIdProto, OutputProto},
         test_utilities::{
             globals_init::make_timestamp_generator_for_test, mock_block::MockRawBlockForBlockchain,
         },
@@ -461,11 +495,12 @@ mod tests {
         let genesis_block_hash = *genesis_block.get_hash();
         let mut longest_chain_queue = LongestChainQueue::new(&genesis_block);
         let fork_manager = ForkManager::new(&genesis_block, constants.clone());
-        let block_fee_manager =
-            BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
+        let block_fee_manager = BlockFeeManager::new(constants.clone());
         let mut blocks_database = BlocksDatabase::new(genesis_block);
         let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
             Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
+        let mock_mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
+            Arc::new(RwLock::new(Box::new(MockMempool::new())));
 
         let mock_block_1: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             1,
@@ -548,7 +583,9 @@ mod tests {
             longest_chain_queue,
             blocks_database,
             block_fee_manager,
+            constants.clone(),
             utxoset_ref.clone(),
+            mock_mempool_ref.clone(),
         )
         .await;
 
@@ -588,18 +625,21 @@ mod tests {
 
         let longest_chain_queue = LongestChainQueue::new(&genesis_block);
         let fork_manager = ForkManager::new(&genesis_block, constants.clone());
-        let block_fee_manager =
-            BlockFeeManager::new(constants.clone(), genesis_block.get_timestamp());
+        let block_fee_manager = BlockFeeManager::new(constants.clone());
         let blocks_database = BlocksDatabase::new(genesis_block);
         let utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>> =
             Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
+        let mock_mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
+            Arc::new(RwLock::new(Box::new(MockMempool::new())));
 
         let mut blockchain = Blockchain::new(
             fork_manager,
             longest_chain_queue,
             blocks_database,
             block_fee_manager,
+            constants.clone(),
             utxoset_ref.clone(),
+            mock_mempool_ref.clone(),
         )
         .await;
         //
@@ -615,16 +655,17 @@ mod tests {
         // block_a has a single output in it
         timestamp_generator.advance(10000);
         let output_1 = OutputProto::new(*keypair.get_public_key(), 2);
-        let seed_input = OutputIdProto::new([0; 32], 0);
-        let tx_1 = TransactionProto::new(
+        let seed_input = OutputIdProto::new([1; 32], 0);
+        let tx_1 = Transaction::new(
+            timestamp_generator.get_timestamp(),
             vec![seed_input],
             vec![output_1],
             TxType::Seed,
-            timestamp_generator.get_timestamp(),
             vec![],
+            keypair.get_secret_key(),
         );
         timestamp_generator.advance(10000);
-        let output_1_input = OutputIdProto::new(tx_1.get_hash(), 0);
+        let output_1_input = OutputIdProto::new(*tx_1.get_hash(), 0);
         let mock_block_1: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             1,
             1000,
@@ -637,15 +678,16 @@ mod tests {
         // block_b spends the output in block_a and creates a new output
         timestamp_generator.advance(10000);
         let output_2 = OutputProto::new(*keypair.get_public_key(), 2);
-        let tx_2 = TransactionProto::new(
+        let tx_2 = Transaction::new(
+            timestamp_generator.get_timestamp(),
             vec![output_1_input.clone()],
             vec![output_2],
             TxType::Normal,
-            timestamp_generator.get_timestamp(),
             vec![],
+            keypair.get_secret_key(),
         );
         timestamp_generator.advance(10000);
-        let output_2_input = OutputIdProto::new(tx_2.get_hash(), 0);
+        let output_2_input = OutputIdProto::new(*tx_2.get_hash(), 0);
         let mock_block_2: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             2,
             1000,
@@ -658,25 +700,27 @@ mod tests {
         // block_c spends the output in block_b and creates a new output
         timestamp_generator.advance(10000);
         let output_3 = OutputProto::new(*keypair.get_public_key(), 2);
-        let tx_3 = TransactionProto::new(
+        let tx_3 = Transaction::new(
+            timestamp_generator.get_timestamp(),
             vec![output_2_input.clone()],
             vec![output_3],
             TxType::Normal,
-            timestamp_generator.get_timestamp(),
             vec![],
+            keypair.get_secret_key(),
         );
 
         let output_3_2 = OutputProto::new(*keypair.get_public_key(), 1);
         let output_3_2_2 = OutputProto::new(*keypair.get_public_key(), 1);
-        let tx_3_2 = TransactionProto::new(
+        let tx_3_2 = Transaction::new(
+            timestamp_generator.get_timestamp(),
             vec![output_2_input.clone()],
             vec![output_3_2, output_3_2_2],
             TxType::Normal,
-            timestamp_generator.get_timestamp(),
             vec![],
+            keypair.get_secret_key(),
         );
         timestamp_generator.advance(10000);
-        let output_3_input = OutputIdProto::new(tx_3.get_hash(), 0);
+        let output_3_input = OutputIdProto::new(*tx_3.get_hash(), 0);
         let mock_block_3: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             3,
             1000,
@@ -688,7 +732,7 @@ mod tests {
         // block_c_2 spends the output in block_b and creates a new output
 
         timestamp_generator.advance(10000);
-        let output_3_2_input = OutputIdProto::new(tx_3_2.get_hash(), 0);
+        let output_3_2_input = OutputIdProto::new(*tx_3_2.get_hash(), 0);
         let mock_block_3_2: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             3,
             1000,
@@ -701,26 +745,28 @@ mod tests {
         // block_d spends the output in block_c and creates a new output
         timestamp_generator.advance(10000);
         let output_4 = OutputProto::new(*keypair.get_public_key(), 2);
-        let tx_4 = TransactionProto::new(
+        let tx_4 = Transaction::new(
+            timestamp_generator.get_timestamp(),
             vec![output_3_input.clone()],
             vec![output_4],
             TxType::Normal,
-            timestamp_generator.get_timestamp(),
             vec![],
+            keypair.get_secret_key(),
         );
         // block_d_2 spends the output in block_c and creates a new output
         timestamp_generator.advance(10000);
         let output_4_2 = OutputProto::new(*keypair.get_public_key(), 1);
-        let tx_4_2 = TransactionProto::new(
+        let tx_4_2 = Transaction::new(
+            timestamp_generator.get_timestamp(),
             vec![output_3_2_input.clone()],
             vec![output_4_2],
             TxType::Normal,
-            timestamp_generator.get_timestamp(),
             vec![],
+            keypair.get_secret_key(),
         );
 
         timestamp_generator.advance(10000);
-        let output_4_input = OutputIdProto::new(tx_4.get_hash(), 0);
+        let output_4_input = OutputIdProto::new(*tx_4.get_hash(), 0);
         let mock_block_4: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             4,
             1000,
@@ -730,7 +776,7 @@ mod tests {
             vec![tx_4],
         ));
 
-        let _output_4_2_input = OutputIdProto::new(tx_4_2.get_hash(), 0);
+        let _output_4_2_input = OutputIdProto::new(*tx_4_2.get_hash(), 0);
         let mock_block_4_2: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             4,
             1000,
@@ -743,14 +789,15 @@ mod tests {
         // block_e spends the output in block_d and creates a new output
         timestamp_generator.advance(1000);
         let output_5 = OutputProto::new(*keypair.get_public_key(), 2);
-        let tx_5 = TransactionProto::new(
+        let tx_5 = Transaction::new(
+            timestamp_generator.get_timestamp(),
             vec![output_4_input.clone()],
             vec![output_5],
             TxType::Normal,
-            timestamp_generator.get_timestamp(),
             vec![],
+            keypair.get_secret_key(),
         );
-        let _output_5_input = OutputIdProto::new(tx_5.get_hash(), 0);
+        let _output_5_input = OutputIdProto::new(*tx_5.get_hash(), 0);
         let mock_block_5: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             5,
             1000,

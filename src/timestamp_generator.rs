@@ -5,7 +5,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// The default implementation simply wraps the system clock.
 pub trait AbstractTimestampGenerator {
     fn get_timestamp(&self) -> u64 {
-        println!("GET REAL TIMESTAMP");
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()

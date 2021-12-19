@@ -14,8 +14,6 @@ pub struct OutputProto {
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct TransactionProto {
-    #[prost(bytes = "vec", optional, tag = "1")]
-    pub hash: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
     #[prost(uint64, tag = "2")]
     pub timestamp: u64,
     #[prost(message, repeated, tag = "3")]
