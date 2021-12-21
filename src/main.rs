@@ -25,12 +25,13 @@ pub async fn main() -> pandacoin::Result<()> {
     tracing_subscriber::fmt::init();
 
     // Initialize all "globals", timestamp generator, command line opts, keypair store, utxoset, blockchain, etc
-    let constants = Arc::new(Constants::new());
     let (shutdown_channel_sender, shutdown_channel_receiver) = broadcast::channel(1);
     let (shutdown_waiting_sender, mut shutdown_waiting_receiver) = mpsc::channel::<()>(1);
-    let timestamp_generator = Box::new(SystemTimestampGenerator::new());
+    let constants = Arc::new(Constants::new());
+    let timestamp_generator: Arc<Box<dyn AbstractTimestampGenerator>> =
+        Arc::new(Box::new(SystemTimestampGenerator::new()));
     let command_line_opts = Arc::new(CommandLineOpts::parse());
-    let keypair_store = KeypairStore::new(command_line_opts.clone());
+    let keypair_store = Arc::new(KeypairStore::new(command_line_opts.clone()));
 
     let genesis_block;
     if command_line_opts.genesis {
@@ -84,6 +85,8 @@ pub async fn main() -> pandacoin::Result<()> {
     let _miniblock_manager_mutex_ref = Arc::new(RwLock::new(Box::new(MiniblockManager::new(
         utxoset_ref.clone(),
         mempool_ref.clone(),
+        timestamp_generator.clone(),
+        keypair_store.clone(),
     ))));
 
     println!("WELCOME TO PANDACOIN!");

@@ -41,6 +41,10 @@ pub fn sign_message(message_bytes: &[u8], secret_key: &SecretKey) -> Secp256k1Si
     let sig = SECP256K1.sign(&msg, secret_key);
     sig.serialize_compact()
 }
+// pub fn encode_signature_for_proto(signature_compact: &Secp256k1SignatureCompact) -> Vec<u8> {
+//     let signature = Signature::from_compact(signature_compact).unwrap();
+//     signature.serialize_compact().to_vec()
+// }
 
 /// Verify a message signed by secp256k1. Message is a plain string. Sig and pubkey should be base58 encoded.
 pub fn verify_string_message(message: &str, sig: &str, public_key: &str) -> bool {

@@ -34,6 +34,7 @@ struct KeypairStoreContext {
 pub struct KeypairStore {
     /// The keypair
     keypair: Keypair,
+    #[allow(dead_code)]
     context: KeypairStoreContext,
 }
 
