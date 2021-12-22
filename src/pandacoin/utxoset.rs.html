@@ -1008,12 +1008,6 @@
 <span id="1008">1008</span>
 <span id="1009">1009</span>
 <span id="1010">1010</span>
-<span id="1011">1011</span>
-<span id="1012">1012</span>
-<span id="1013">1013</span>
-<span id="1014">1014</span>
-<span id="1015">1015</span>
-<span id="1016">1016</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">dashmap::mapref::entry::Entry</span>;
 <span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IndexedParallelIterator</span>, <span class="ident">IntoParallelRefIterator</span>, <span class="ident">ParallelIterator</span>};
@@ -1024,6 +1018,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos</span>::{<span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>, <span class="ident">RawBlockProto</span>, <span class="ident">TransactionProto</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::types::Sha256Hash</span>;
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
+<span class="kw">use</span> <span class="ident">std::hash::Hash</span>;
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
 
 <span class="kw">use</span> <span class="ident">dashmap::DashMap</span>;
@@ -1114,20 +1109,11 @@
     <span class="kw">fn</span> <span class="ident">roll_forward_on_fork</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
     <span class="kw">fn</span> <span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
     <span class="kw">fn</span> <span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
-    <span class="comment">// fn longest_chain_spent_status(</span>
-    <span class="comment">//     &amp;self,</span>
-    <span class="comment">//     output_id: &amp;OutputIdProto,</span>
-    <span class="comment">//     block_id: u32,</span>
-    <span class="comment">// ) -&gt; LongestChainSpentTime;</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_at_block_id</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
-        <span class="ident">block_id</span>: <span class="ident">u32</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">block_id</span>: <span class="ident">u32</span>,
     ) -&gt; <span class="ident">bool</span>;
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_in_fork_branch</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
-        <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
     ) -&gt; <span class="ident">bool</span>;
     <span class="kw">fn</span> <span class="ident">get_total_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>;
     <span class="kw">fn</span> <span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
@@ -1138,6 +1124,7 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UtxoSetContext</span> {
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">constants</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Constants</span><span class="op">&gt;</span>,
 }
 <span class="doccomment">/// A hashmap storing everything needed to validate the spendability of a output.</span>
@@ -1146,6 +1133,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UtxoSet</span> {
     <span class="ident">status_map</span>: <span class="ident">DashMap</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span>, <span class="ident">SlipSpentStatus</span><span class="op">&gt;</span>,
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">context</span>: <span class="ident">UtxoSetContext</span>,
 }
 
@@ -1183,9 +1171,7 @@
     <span class="doccomment">/// a fork, in which case we need to know it&#39;s status at the common ancestor</span>
     <span class="doccomment">/// block.</span>
     <span class="kw">fn</span> <span class="ident">longest_chain_spent_status</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
-        <span class="ident">block_id</span>: <span class="ident">u32</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">block_id</span>: <span class="ident">u32</span>,
     ) -&gt; <span class="ident">LongestChainSpentTime</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">status_map</span>.<span class="ident">get</span>(<span class="ident">output_id</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">status</span>) =&gt; {
@@ -1240,7 +1226,7 @@
     <span class="doccomment">/// the vector.</span>
 
     <span class="kw">fn</span> <span class="ident">roll_back_on_fork</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
-        <span class="ident">block</span>.<span class="ident">get_transactions</span>().<span class="ident">par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
+        <span class="ident">block</span>.<span class="ident">transactions_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
             <span class="ident">tx</span>.<span class="ident">get_outputs</span>()
                 .<span class="ident">par_iter</span>()
                 .<span class="ident">enumerate</span>()
@@ -1282,7 +1268,7 @@
     <span class="doccomment">/// This method be called when the block is first seen but should never need to be called</span>
     <span class="doccomment">/// during a reorg.</span>
     <span class="kw">fn</span> <span class="ident">roll_forward_on_fork</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
-        <span class="ident">block</span>.<span class="ident">get_transactions</span>().<span class="ident">par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
+        <span class="ident">block</span>.<span class="ident">transactions_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
             <span class="ident">tx</span>.<span class="ident">get_outputs</span>()
                 .<span class="ident">iter</span>()
                 .<span class="ident">enumerate</span>()
@@ -1319,7 +1305,7 @@
     <span class="doccomment">/// the transaction is rolled forward in another block.</span>
     <span class="kw">fn</span> <span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
         <span class="comment">// unspend outputs and spend the inputs</span>
-        <span class="ident">block</span>.<span class="ident">get_transactions</span>().<span class="ident">par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
+        <span class="ident">block</span>.<span class="ident">transactions_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
             <span class="ident">tx</span>.<span class="ident">get_outputs</span>()
                 .<span class="ident">par_iter</span>()
                 .<span class="ident">enumerate</span>()
@@ -1356,9 +1342,8 @@
     <span class="doccomment">/// Outputs should be added or marked Unspent, Inputs should be marked Spent. This method</span>
     <span class="doccomment">/// Can be called during a normal new block or during a reorg, so Unspent Outputs may already</span>
     <span class="doccomment">/// be present if we&#39;re doing a reorg.</span>
-    <span class="comment">//pub fn roll_forward(&amp;mut self, block: &amp;dyn RawBlock) {</span>
     <span class="kw">fn</span> <span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
-        <span class="ident">block</span>.<span class="ident">get_transactions</span>().<span class="ident">par_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
+        <span class="ident">block</span>.<span class="ident">transactions_iter</span>().<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
             <span class="ident">tx</span>.<span class="ident">get_outputs</span>()
                 .<span class="ident">par_iter</span>()
                 .<span class="ident">enumerate</span>()
@@ -1388,9 +1373,7 @@
     <span class="doccomment">/// block). The ForkTuple allows us to check for Unspent/Spent status along the fork&#39;s</span>
     <span class="doccomment">/// potential new chain more quickly. This can be further optimized in the future.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_at_block_id</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
-        <span class="ident">block_id</span>: <span class="ident">u32</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">block_id</span>: <span class="ident">u32</span>,
     ) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">longest_chain_spent_status</span>(<span class="ident">output_id</span>, <span class="ident">block_id</span>);
         <span class="ident">longest_chain_spent_time</span> <span class="op">==</span> <span class="ident">LongestChainSpentTime::BetweenUnspentAndSpent</span>
@@ -1400,9 +1383,7 @@
     <span class="doccomment">/// root block of a fork). The ForkTuple allows us to check for Unspent/Spent status along the fork&#39;s</span>
     <span class="doccomment">/// potential new chain more quickly. This can be further optimized in the future.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_in_fork_branch</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
-        <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
     ) -&gt; <span class="ident">bool</span> {
         <span class="comment">// first we figure out if the output has been spent at the ancestor block</span>
         <span class="kw">let</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span>
@@ -1533,10 +1514,9 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
 
-    <span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">crypto::hash_bytes</span>,
         <span class="ident">keypair::Keypair</span>,
         <span class="ident">panda_protos::transaction_proto::TxType</span>,
         <span class="ident">test_utilities</span>::{
@@ -1576,6 +1556,11 @@
         <span class="comment">// rollforward block containing the output</span>
         <span class="ident">utxo_set</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a</span>);
         <span class="comment">// output should be spendable now</span>
+
+        <span class="macro">println!</span>(
+            <span class="string">&quot;{:?}&quot;</span>,
+            <span class="ident">utxo_set</span>.<span class="ident">longest_chain_spent_status</span>(<span class="kw-2">&amp;</span><span class="ident">output_a_input</span>, <span class="number">0</span>)
+        );
         <span class="macro">assert!</span>(
             <span class="ident">utxo_set</span>
                 .<span class="ident">is_output_spendable_at_block_id</span>(<span class="kw-2">&amp;</span><span class="ident">output_a_input</span>, <span class="ident">mock_block_b</span>.<span class="ident">get_id</span>())
@@ -1986,9 +1971,8 @@
                 <span class="ident">message</span>: <span class="macro">vec!</span>[],
                 <span class="ident">signature</span>: <span class="macro">vec!</span>[<span class="number">0</span>; <span class="number">64</span>],
             };
-
-            <span class="kw">let</span> <span class="ident">input_for_spent_output</span> <span class="op">=</span>
-                <span class="ident">OutputIdProto::new</span>(<span class="ident">block_1_tx</span>.<span class="ident">hash</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>(), <span class="number">0</span>);
+            <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">hash_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">block_1_tx</span>.<span class="ident">serialize</span>());
+            <span class="kw">let</span> <span class="ident">input_for_spent_output</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="ident">hash</span>, <span class="number">0</span>);
             <span class="kw">let</span> <span class="ident">block_2_tx</span> <span class="op">=</span> <span class="ident">TransactionProto</span> {
                 <span class="ident">timestamp</span>: <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
                 <span class="ident">inputs</span>: <span class="macro">vec!</span>[<span class="ident">input_for_spent_output</span>],
@@ -2005,7 +1989,10 @@
         <span class="kw">let</span> <span class="ident">mock_block_1</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForUTXOSet::new</span>(
             <span class="number">1</span>,
             [<span class="number">1</span>; <span class="number">32</span>],
-            <span class="ident">Transaction::transform_transaction_protos</span>(<span class="ident">block_1_txs</span>),
+            <span class="ident">block_1_txs</span>
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="ident">Transaction::from_proto</span>)
+                .<span class="ident">collect</span>(),
         ));
 
         <span class="ident">utxo_set</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_1</span>);
@@ -2023,6 +2010,7 @@
             <span class="ident">previous_block_hash</span>: [<span class="number">2</span>; <span class="number">32</span>].<span class="ident">to_vec</span>(),
             <span class="ident">merkle_root</span>: <span class="macro">vec!</span>[],
             <span class="ident">transactions</span>: <span class="ident">block_2_txs</span>,
+            <span class="ident">mini_blocks</span>: <span class="macro">vec!</span>[],
         };
 
         <span class="comment">//utxo_set.roll_forward(&amp;mock_block_2);</span>

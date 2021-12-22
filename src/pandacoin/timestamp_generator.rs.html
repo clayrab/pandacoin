@@ -44,7 +44,7 @@
 
 <span class="doccomment">/// A trait used for getting timestamps. The purpose of this is to allow the timestamp generator to be mockable.</span>
 <span class="doccomment">/// The default implementation simply wraps the system clock.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AbstractTimestampGenerator</span> {
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AbstractTimestampGenerator</span>: <span class="ident">Debug</span> {
     <span class="kw">fn</span> <span class="ident">get_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u64</span> {
         <span class="ident">SystemTime::now</span>()
             .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)

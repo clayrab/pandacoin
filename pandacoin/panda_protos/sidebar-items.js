@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["transaction_proto","Nested message and enum types in `TransactionProto`."]],"struct":[["OutputIdProto",""],["OutputProto",""],["RawBlockProto",""],["TransactionProto",""]]});
+initSidebarItems({"mod":[["transaction_proto","Nested message and enum types in `TransactionProto`."]],"struct":[["MiniBlockProto",""],["OutputIdProto",""],["OutputProto",""],["RawBlockProto",""],["TransactionProto",""]]});

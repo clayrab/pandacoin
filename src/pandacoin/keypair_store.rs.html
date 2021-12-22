@@ -151,6 +151,7 @@
 <span id="151">151</span>
 <span id="152">152</span>
 <span id="153">153</span>
+<span id="154">154</span>
 </pre><pre class="rust"><code><span class="doccomment">/*!
 
 # Keypair Store
@@ -187,6 +188,7 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeypairStore</span> {
     <span class="doccomment">/// The keypair</span>
     <span class="ident">keypair</span>: <span class="ident">Keypair</span>,
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
     <span class="ident">context</span>: <span class="ident">KeypairStoreContext</span>,
 }
 
