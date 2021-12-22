@@ -26,8 +26,7 @@ pub fn make_message(message: &[u8]) -> Sha256Hash {
 pub fn hash_bytes(data: &[u8]) -> Sha256Hash {
     let mut hasher = Hasher::new();
     // Hashing in parallel can be faster if large enough
-    // TODO: Blake3 has benchmarked 128 kb as the cutoff,
-    // the benchmark should be redone for Saito's needs
+    // TODO: Blake3 has benchmarked 128 kb as the cutoff.
     if data.len() > PARALLEL_HASH_BYTE_THRESHOLD {
         hasher.update(data);
     } else {
@@ -41,16 +40,11 @@ pub fn sign_message(message_bytes: &[u8], secret_key: &SecretKey) -> Secp256k1Si
     let sig = SECP256K1.sign(&msg, secret_key);
     sig.serialize_compact()
 }
-// pub fn encode_signature_for_proto(signature_compact: &Secp256k1SignatureCompact) -> Vec<u8> {
-//     let signature = Signature::from_compact(signature_compact).unwrap();
-//     signature.serialize_compact().to_vec()
-// }
 
 /// Verify a message signed by secp256k1. Message is a plain string. Sig and pubkey should be base58 encoded.
 pub fn verify_string_message(message: &str, sig: &str, public_key: &str) -> bool {
     // TODO: Can we just use from_hashed_data?
     // see https://docs.rs/secp256k1/0.20.3/secp256k1/
-    // let message = Message::from_hashed_data::<sha256::Hash>("Hello World!".as_bytes());
     let message = Message::from_slice(&make_message_from_string(message)).unwrap();
     let sig = Signature::from_der(&String::from(sig).from_base58().unwrap()).unwrap();
     let public_key =
