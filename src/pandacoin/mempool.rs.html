@@ -430,7 +430,7 @@
                     .<span class="ident">entry</span>(<span class="ident">input</span>.<span class="ident">clone</span>())
                     .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">tx_set</span><span class="op">|</span> {
                         <span class="comment">// if any input is already recorded in known_inputs, this tx is already_known</span>
-                        <span class="ident">is_already_known</span> <span class="op">=</span> <span class="ident">is_already_known</span> <span class="op">|</span><span class="op">|</span> <span class="bool-val">true</span>;
+                        <span class="ident">is_already_known</span> <span class="op">=</span> <span class="bool-val">true</span>;
                         <span class="ident">tx_set</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">transaction</span>.<span class="ident">get_hash</span>());
                     })
                     .<span class="ident">or_insert</span>(<span class="ident">HashSet::from</span>([<span class="kw-2">*</span><span class="ident">transaction</span>.<span class="ident">get_hash</span>()]));
