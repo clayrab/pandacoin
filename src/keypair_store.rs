@@ -57,7 +57,6 @@ impl KeypairStore {
             );
         }
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
-
         KeypairStore {
             keypair,
             context: KeypairStoreContext {
@@ -67,9 +66,21 @@ impl KeypairStore {
     }
     /// Create new `KeypairStore` for testing from existing wallet in test data.
     pub fn new_mock(_command_line_opts: Arc<CommandLineOpts>) -> Self {
+        let path = Path::new(&"data/test/testwallet");
         let decrypted_buffer: Vec<u8>;
-        decrypted_buffer =
-            KeypairStore::read_key_file("data/test/testwallet", &Some(String::from("asdf")));
+        if !path.exists() {
+            println!("Creating key file");
+            decrypted_buffer = KeypairStore::create_key_file(
+                &"data/test/testwallet",
+                &Some(String::from("asdf")),
+            );
+        } else {
+            println!("Reading key file");
+            decrypted_buffer = KeypairStore::read_key_file(
+                &"data/test/testwallet",
+                &Some(String::from("asdf")),
+            );
+        }
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
         KeypairStore {
             keypair,
@@ -80,7 +91,7 @@ impl KeypairStore {
     pub fn get_keypair(&self) -> &Keypair {
         &self.keypair
     }
-
+    /// create a key file
     fn create_key_file(key_file_path: &str, opts_password: &Option<String>) -> Vec<u8> {
         let password: String;
         if opts_password.is_none() {
@@ -100,7 +111,7 @@ impl KeypairStore {
 
         keypair.get_secret_key()[..].to_vec()
     }
-
+    /// read key file
     fn read_key_file(key_file_path: &str, opts_password: &Option<String>) -> Vec<u8> {
         let password: String;
         if opts_password.is_none() {
@@ -147,7 +158,7 @@ mod test {
         // let keypair_store = KeypairStore::new_mock(command_line_opts.clone());
         let keypair_store = make_keypair_store_for_test();
         assert_eq!(
-            "02fc238df3474c274887f85b3f36d3adffa5465f15840779da6fc82f912c4d1009",
+            "028a3c8530519a64f686af69a4a683ff5c7afadc1baadd4c2ab330ff62818a6d02",
             hex::encode(keypair_store.get_keypair().get_public_key().serialize())
         );
     }

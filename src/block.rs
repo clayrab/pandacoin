@@ -10,13 +10,13 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::str::FromStr;
+///
 /// This structure is a basic block, it should be 1-to-1 with the physical data which will be serialized
 /// and send over the wire and stored on disk.
 /// We provide a useless default implementation for the sake of making different mock RawBlocks easier.
 /// We would prefer to define only the interface here and the default implementation in mock_block.rs, but
 /// Rust does not allow this.
 ///
-
 pub trait RawBlock: Debug + Send + Sync {
     fn get_signature(&self) -> Signature {
         Signature::from_compact(&[0; 64]).unwrap()
@@ -40,9 +40,7 @@ pub trait RawBlock: Debug + Send + Sync {
     fn get_id(&self) -> u32 {
         0
     }
-    // fn get_transactions(&self) -> &Vec<Transaction>;
     fn get_mini_blocks(&self) -> &Vec<MiniBlock>;
-
     fn transactions_iter(&self) -> TransactionsIter<'_> {
         TransactionsIter {
             index: 0,
@@ -51,6 +49,7 @@ pub trait RawBlock: Debug + Send + Sync {
         }
     }
 }
+
 #[derive(Clone, Debug)]
 pub struct PandaBlock {
     hash: Sha256Hash,
@@ -165,12 +164,12 @@ impl RawBlock for PandaBlock {
     }
 }
 
-// struct TransactionsIter<'a>(&'a PandaBlock);
 pub struct TransactionsIter<'a> {
     index: usize,
     mini_block_index: usize,
     mini_blocks: &'a Vec<MiniBlock>,
 }
+
 impl<'a> Iterator for TransactionsIter<'a> {
     type Item = &'a Transaction;
 

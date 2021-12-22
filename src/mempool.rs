@@ -115,7 +115,7 @@ impl AbstractMempool for Mempool {
                     .entry(input.clone())
                     .and_modify(|tx_set| {
                         // if any input is already recorded in known_inputs, this tx is already_known
-                        is_already_known = is_already_known || true;
+                        is_already_known = true;
                         tx_set.insert(*transaction.get_hash());
                     })
                     .or_insert(HashSet::from([*transaction.get_hash()]));
