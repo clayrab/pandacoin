@@ -46,16 +46,12 @@
 <span id="46">46</span>
 <span id="47">47</span>
 <span id="48">48</span>
-<span id="49">49</span>
-<span id="50">50</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">panda_protos</span>::{<span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>},
     <span class="ident">types</span>::{<span class="ident">PandaAddress</span>, <span class="ident">Sha256Hash</span>},
 };
 <span class="kw">use</span> <span class="ident">secp256k1::PublicKey</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">convert::TryInto</span>,
-};
+<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 
 <span class="kw">impl</span> <span class="ident">OutputIdProto</span> {
     <span class="doccomment">/// Create new `OutputIdProto`</span>

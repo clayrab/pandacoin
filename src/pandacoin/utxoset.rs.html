@@ -1008,6 +1008,16 @@
 <span id="1008">1008</span>
 <span id="1009">1009</span>
 <span id="1010">1010</span>
+<span id="1011">1011</span>
+<span id="1012">1012</span>
+<span id="1013">1013</span>
+<span id="1014">1014</span>
+<span id="1015">1015</span>
+<span id="1016">1016</span>
+<span id="1017">1017</span>
+<span id="1018">1018</span>
+<span id="1019">1019</span>
+<span id="1020">1020</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">dashmap::mapref::entry::Entry</span>;
 <span class="kw">use</span> <span class="ident">rayon::iter</span>::{<span class="ident">IndexedParallelIterator</span>, <span class="ident">IntoParallelRefIterator</span>, <span class="ident">ParallelIterator</span>};
@@ -1110,10 +1120,14 @@
     <span class="kw">fn</span> <span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
     <span class="kw">fn</span> <span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_at_block_id</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">block_id</span>: <span class="ident">u32</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
+        <span class="ident">block_id</span>: <span class="ident">u32</span>,
     ) -&gt; <span class="ident">bool</span>;
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_in_fork_branch</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
+        <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
     ) -&gt; <span class="ident">bool</span>;
     <span class="kw">fn</span> <span class="ident">get_total_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>;
     <span class="kw">fn</span> <span class="ident">get_receiver_for_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_ids</span>: <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>;
@@ -1171,7 +1185,9 @@
     <span class="doccomment">/// a fork, in which case we need to know it&#39;s status at the common ancestor</span>
     <span class="doccomment">/// block.</span>
     <span class="kw">fn</span> <span class="ident">longest_chain_spent_status</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">block_id</span>: <span class="ident">u32</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
+        <span class="ident">block_id</span>: <span class="ident">u32</span>,
     ) -&gt; <span class="ident">LongestChainSpentTime</span> {
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">status_map</span>.<span class="ident">get</span>(<span class="ident">output_id</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">status</span>) =&gt; {
@@ -1373,7 +1389,9 @@
     <span class="doccomment">/// block). The ForkTuple allows us to check for Unspent/Spent status along the fork&#39;s</span>
     <span class="doccomment">/// potential new chain more quickly. This can be further optimized in the future.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_at_block_id</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">block_id</span>: <span class="ident">u32</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
+        <span class="ident">block_id</span>: <span class="ident">u32</span>,
     ) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">longest_chain_spent_status</span>(<span class="ident">output_id</span>, <span class="ident">block_id</span>);
         <span class="ident">longest_chain_spent_time</span> <span class="op">==</span> <span class="ident">LongestChainSpentTime::BetweenUnspentAndSpent</span>
@@ -1383,7 +1401,9 @@
     <span class="doccomment">/// root block of a fork). The ForkTuple allows us to check for Unspent/Spent status along the fork&#39;s</span>
     <span class="doccomment">/// potential new chain more quickly. This can be further optimized in the future.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">is_output_spendable_in_fork_branch</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>, <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">output_id</span>: <span class="kw-2">&amp;</span><span class="ident">OutputIdProto</span>,
+        <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
     ) -&gt; <span class="ident">bool</span> {
         <span class="comment">// first we figure out if the output has been spent at the ancestor block</span>
         <span class="kw">let</span> <span class="ident">longest_chain_spent_time</span> <span class="op">=</span>

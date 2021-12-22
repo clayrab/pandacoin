@@ -170,6 +170,15 @@
 <span id="170">170</span>
 <span id="171">171</span>
 <span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block::RawBlock</span>,
     <span class="ident">miniblock::MiniBlock</span>,
@@ -190,8 +199,11 @@
 }
 <span class="kw">impl</span> <span class="ident">MockRawBlockForBlockFee</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">mock_block_id</span>: <span class="ident">u32</span>, <span class="ident">mock_block_fee</span>: <span class="ident">u64</span>, <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
-        <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>, <span class="ident">timestamp</span>: <span class="ident">u64</span>,
+        <span class="ident">mock_block_id</span>: <span class="ident">u32</span>,
+        <span class="ident">mock_block_fee</span>: <span class="ident">u64</span>,
+        <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
+        <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>,
+        <span class="ident">timestamp</span>: <span class="ident">u64</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="ident">MockRawBlockForBlockFee</span> {
             <span class="ident">mock_block_id</span>,
@@ -233,7 +245,9 @@
 }
 <span class="kw">impl</span> <span class="ident">MockRawBlockForUTXOSet</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">mock_block_id</span>: <span class="ident">u32</span>, <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>, <span class="ident">transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
+        <span class="ident">mock_block_id</span>: <span class="ident">u32</span>,
+        <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
+        <span class="ident">transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">mini_block_transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionProto</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">transactions</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> <span class="ident">tx</span>.<span class="ident">into_proto</span>()).<span class="ident">collect</span>();
@@ -276,8 +290,12 @@
 }
 <span class="kw">impl</span> <span class="ident">MockRawBlockForBlockchain</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">mock_block_id</span>: <span class="ident">u32</span>, <span class="ident">mock_block_fee</span>: <span class="ident">u64</span>, <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
-        <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>, <span class="ident">timestamp</span>: <span class="ident">u64</span>, <span class="ident">transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
+        <span class="ident">mock_block_id</span>: <span class="ident">u32</span>,
+        <span class="ident">mock_block_fee</span>: <span class="ident">u64</span>,
+        <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
+        <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>,
+        <span class="ident">timestamp</span>: <span class="ident">u64</span>,
+        <span class="ident">transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">mini_block_transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionProto</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">transactions</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> <span class="ident">tx</span>.<span class="ident">into_proto</span>()).<span class="ident">collect</span>();
