@@ -5,16 +5,7 @@ use crate::{
 use secp256k1::PublicKey;
 use std::{
     convert::TryInto,
-    hash::{Hash, Hasher},
 };
-
-/// A record of owernship of funds on the network
-impl Hash for OutputIdProto {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.output_ordinal.to_ne_bytes());
-        state.write(&self.tx_id)
-    }
-}
 
 impl OutputIdProto {
     /// Create new `OutputIdProto`

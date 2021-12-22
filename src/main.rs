@@ -105,7 +105,7 @@ pub async fn main() -> pandacoin::Result<()> {
     println!("Key: {}", keypair_store.get_keypair().get_public_key());
 
     // Run whatever tasks compose the application
-    tokio::spawn(async move { run() });
+    tokio::spawn(async move { run().await });
 
     // Wait for a shutdown signal
     match signal_for_shutdown().await {
