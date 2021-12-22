@@ -25,6 +25,14 @@ message TransactionProto {
     bytes signature = 6;
 }
 
+message MiniBlockProto {
+    bytes receiver = 1;
+    bytes creator = 2;
+    bytes signature = 3;
+    bytes merkle_root = 4;
+    repeated TransactionProto transactions = 5;
+}
+
 message RawBlockProto {
     uint32 id = 1;
     uint64 timestamp = 2;
@@ -32,5 +40,5 @@ message RawBlockProto {
     bytes creator = 4;
     bytes signature = 5;
     bytes merkle_root = 6;
-    repeated TransactionProto transactions = 7;
+    repeated MiniBlockProto mini_blocks = 8;
 }

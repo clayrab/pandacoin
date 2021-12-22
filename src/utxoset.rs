@@ -8,6 +8,7 @@ use crate::constants::Constants;
 use crate::panda_protos::{OutputIdProto, OutputProto, RawBlockProto, TransactionProto};
 use crate::types::Sha256Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use dashmap::DashMap;
@@ -98,20 +99,11 @@ pub trait AbstractUtxoSet: Debug {
     fn roll_forward_on_fork(&mut self, block: &Box<dyn RawBlock>);
     fn roll_back(&mut self, block: &Box<dyn RawBlock>);
     fn roll_forward(&mut self, block: &Box<dyn RawBlock>);
-    // fn longest_chain_spent_status(
-    //     &self,
-    //     output_id: &OutputIdProto,
-    //     block_id: u32,
-    // ) -> LongestChainSpentTime;
     async fn is_output_spendable_at_block_id(
-        &self,
-        output_id: &OutputIdProto,
-        block_id: u32,
+        &self, output_id: &OutputIdProto, block_id: u32,
     ) -> bool;
     async fn is_output_spendable_in_fork_branch(
-        &self,
-        output_id: &OutputIdProto,
-        fork_chains: &ForkChains,
+        &self, output_id: &OutputIdProto, fork_chains: &ForkChains,
     ) -> bool;
     fn get_total_for_inputs(&self, output_ids: Vec<OutputIdProto>) -> Option<u64>;
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>>;
@@ -122,6 +114,7 @@ pub trait AbstractUtxoSet: Debug {
 
 #[derive(Debug)]
 pub struct UtxoSetContext {
+    #[allow(dead_code)]
     constants: Arc<Constants>,
 }
 /// A hashmap storing everything needed to validate the spendability of a output.
@@ -130,6 +123,7 @@ pub struct UtxoSetContext {
 #[derive(Debug)]
 pub struct UtxoSet {
     status_map: DashMap<OutputIdProto, SlipSpentStatus>,
+    #[allow(dead_code)]
     context: UtxoSetContext,
 }
 
@@ -167,9 +161,7 @@ impl UtxoSet {
     /// a fork, in which case we need to know it's status at the common ancestor
     /// block.
     fn longest_chain_spent_status(
-        &self,
-        output_id: &OutputIdProto,
-        block_id: u32,
+        &self, output_id: &OutputIdProto, block_id: u32,
     ) -> LongestChainSpentTime {
         match &self.status_map.get(output_id) {
             Some(status) => {
@@ -224,7 +216,7 @@ impl AbstractUtxoSet for UtxoSet {
     /// the vector.
 
     fn roll_back_on_fork(&mut self, block: &Box<dyn RawBlock>) {
-        block.get_transactions().par_iter().for_each(|tx| {
+        block.transactions_iter().for_each(|tx| {
             tx.get_outputs()
                 .par_iter()
                 .enumerate()
@@ -266,7 +258,7 @@ impl AbstractUtxoSet for UtxoSet {
     /// This method be called when the block is first seen but should never need to be called
     /// during a reorg.
     fn roll_forward_on_fork(&mut self, block: &Box<dyn RawBlock>) {
-        block.get_transactions().par_iter().for_each(|tx| {
+        block.transactions_iter().for_each(|tx| {
             tx.get_outputs()
                 .iter()
                 .enumerate()
@@ -303,7 +295,7 @@ impl AbstractUtxoSet for UtxoSet {
     /// the transaction is rolled forward in another block.
     fn roll_back(&mut self, block: &Box<dyn RawBlock>) {
         // unspend outputs and spend the inputs
-        block.get_transactions().par_iter().for_each(|tx| {
+        block.transactions_iter().for_each(|tx| {
             tx.get_outputs()
                 .par_iter()
                 .enumerate()
@@ -340,9 +332,8 @@ impl AbstractUtxoSet for UtxoSet {
     /// Outputs should be added or marked Unspent, Inputs should be marked Spent. This method
     /// Can be called during a normal new block or during a reorg, so Unspent Outputs may already
     /// be present if we're doing a reorg.
-    //pub fn roll_forward(&mut self, block: &dyn RawBlock) {
     fn roll_forward(&mut self, block: &Box<dyn RawBlock>) {
-        block.get_transactions().par_iter().for_each(|tx| {
+        block.transactions_iter().for_each(|tx| {
             tx.get_outputs()
                 .par_iter()
                 .enumerate()
@@ -372,9 +363,7 @@ impl AbstractUtxoSet for UtxoSet {
     /// block). The ForkTuple allows us to check for Unspent/Spent status along the fork's
     /// potential new chain more quickly. This can be further optimized in the future.
     async fn is_output_spendable_at_block_id(
-        &self,
-        output_id: &OutputIdProto,
-        block_id: u32,
+        &self, output_id: &OutputIdProto, block_id: u32,
     ) -> bool {
         let longest_chain_spent_time = self.longest_chain_spent_status(output_id, block_id);
         longest_chain_spent_time == LongestChainSpentTime::BetweenUnspentAndSpent
@@ -384,9 +373,7 @@ impl AbstractUtxoSet for UtxoSet {
     /// root block of a fork). The ForkTuple allows us to check for Unspent/Spent status along the fork's
     /// potential new chain more quickly. This can be further optimized in the future.
     async fn is_output_spendable_in_fork_branch(
-        &self,
-        output_id: &OutputIdProto,
-        fork_chains: &ForkChains,
+        &self, output_id: &OutputIdProto, fork_chains: &ForkChains,
     ) -> bool {
         // first we figure out if the output has been spent at the ancestor block
         let longest_chain_spent_time =
@@ -517,10 +504,9 @@ impl AbstractUtxoSet for UtxoSet {
 #[cfg(test)]
 mod test {
 
-    use std::convert::TryInto;
-
     use super::*;
     use crate::{
+        crypto::hash_bytes,
         keypair::Keypair,
         panda_protos::transaction_proto::TxType,
         test_utilities::{
@@ -560,6 +546,11 @@ mod test {
         // rollforward block containing the output
         utxo_set.roll_forward(&mock_block_a);
         // output should be spendable now
+
+        println!(
+            "{:?}",
+            utxo_set.longest_chain_spent_status(&output_a_input, 0)
+        );
         assert!(
             utxo_set
                 .is_output_spendable_at_block_id(&output_a_input, mock_block_b.get_id())
@@ -970,9 +961,8 @@ mod test {
                 message: vec![],
                 signature: vec![0; 64],
             };
-
-            let input_for_spent_output =
-                OutputIdProto::new(block_1_tx.hash().try_into().unwrap(), 0);
+            let hash = hash_bytes(&block_1_tx.serialize());
+            let input_for_spent_output = OutputIdProto::new(hash, 0);
             let block_2_tx = TransactionProto {
                 timestamp: timestamp_generator.get_timestamp(),
                 inputs: vec![input_for_spent_output],
@@ -989,7 +979,10 @@ mod test {
         let mock_block_1: Box<dyn RawBlock> = Box::new(MockRawBlockForUTXOSet::new(
             1,
             [1; 32],
-            Transaction::transform_transaction_protos(block_1_txs),
+            block_1_txs
+                .into_iter()
+                .map(Transaction::from_proto)
+                .collect(),
         ));
 
         utxo_set.roll_forward(&mock_block_1);
@@ -1007,6 +1000,7 @@ mod test {
             previous_block_hash: [2; 32].to_vec(),
             merkle_root: vec![],
             transactions: block_2_txs,
+            mini_blocks: vec![],
         };
 
         //utxo_set.roll_forward(&mock_block_2);

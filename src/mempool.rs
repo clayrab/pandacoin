@@ -33,6 +33,7 @@ pub struct Mempool {
     block_count: u32,
     // Do we memoize the current set? yes...
     current_set: HashSet<Sha256Hash>,
+    //current_set: HashSet,
     // tx-hash -> tx
     transactions: HashMap<Sha256Hash, Transaction>,
     // maps inputs to transactions
@@ -138,7 +139,7 @@ impl AbstractMempool for Mempool {
         self.block_count += 1;
         // For each transaction in the block, remove all transactions from the mempool which was spending any of
         // their inputs(which should include the transaction itself)
-        for transaction in block.get_transactions() {
+        for transaction in block.transactions_iter() {
             for input in transaction.get_inputs() {
                 if let Some(tx_set) = self.known_inputs.get(input) {
                     for tx_hash in tx_set {
@@ -151,7 +152,7 @@ impl AbstractMempool for Mempool {
 
     fn roll_back(&mut self, block: &Box<dyn RawBlock>) {
         self.block_count -= 1;
-        for transaction in block.get_transactions() {
+        for transaction in block.transactions_iter() {
             // if we had this transaction in mempool earlier, we can reuse it
             if let Some(_) = self.transactions.get(transaction.get_hash()) {
                 self.current_set.insert(*transaction.get_hash());
@@ -167,7 +168,7 @@ impl AbstractMempool for Mempool {
         }
     }
     fn roll_forward_max_reorg(&mut self, block: &Box<dyn RawBlock>) {
-        for transaction in block.get_transactions() {
+        for transaction in block.transactions_iter() {
             for input in transaction.get_inputs() {
                 self.known_inputs.remove(input);
             }

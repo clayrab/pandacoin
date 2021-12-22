@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// A trait used for getting timestamps. The purpose of this is to allow the timestamp generator to be mockable.
 /// The default implementation simply wraps the system clock.
-pub trait AbstractTimestampGenerator {
+pub trait AbstractTimestampGenerator: Debug {
     fn get_timestamp(&self) -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)

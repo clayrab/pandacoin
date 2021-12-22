@@ -2,13 +2,9 @@ use crate::constants::Constants;
 
 impl Constants {
     pub fn new_for_test(
-        starting_block_fee: Option<u64>,
-        block_time_target_ms: Option<u64>,
-        number_of_blocks_for_target_calc: Option<u64>,
-        total_lit: Option<u64>,
-        ions_per_lit: Option<u64>,
-        max_reorg: Option<u32>,
-        payment_delay: Option<u32>,
+        starting_block_fee: Option<u64>, block_time_target_ms: Option<u64>,
+        number_of_blocks_for_target_calc: Option<u64>, total_lit: Option<u64>,
+        ions_per_lit: Option<u64>, max_reorg: Option<u32>, payment_delay: Option<u32>,
     ) -> Self {
         Constants {
             starting_block_fee: starting_block_fee.unwrap_or(1),

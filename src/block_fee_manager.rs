@@ -33,10 +33,7 @@ impl BlockFeeAggregateForkData {
 
 impl BlockFeeAggregateForkData {
     pub fn roll_forward(
-        &mut self,
-        block_timestamp: u64,
-        block_fee: u64,
-        number_of_blocks_for_target_calc: u64,
+        &mut self, block_timestamp: u64, block_fee: u64, number_of_blocks_for_target_calc: u64,
     ) {
         self.timestamps.push_back(block_timestamp);
         self.block_fees.push_back(block_fee);
@@ -72,11 +69,8 @@ impl BlockFeeManager {
     }
 
     pub async fn get_next_fee_on_fork(
-        &self,
-        next_block: &Box<dyn RawBlock>,
-        fork_manager: &ForkManager,
-        longest_chain_queue: &LongestChainQueue,
-        blocks_database: &BlocksDatabase,
+        &self, next_block: &Box<dyn RawBlock>, fork_manager: &ForkManager,
+        longest_chain_queue: &LongestChainQueue, blocks_database: &BlocksDatabase,
     ) -> u64 {
         if next_block.get_id() <= 1 {
             return self.context.constants.get_starting_block_fee();
@@ -226,16 +220,10 @@ mod test {
     };
 
     async fn add_mock_block_with_fee(
-        mock_block_id: u32,
-        mock_block_fee: u64,
-        mock_block_hash: Sha256Hash,
-        mock_parent_hash: Sha256Hash,
-        expected_next_fee: u64,
-        timestamp: u64,
-        fork_manager: &mut ForkManager,
-        blocks_database: &mut BlocksDatabase,
-        block_fee_manager: &mut BlockFeeManager,
-        longest_chain_queue: &mut LongestChainQueue,
+        mock_block_id: u32, mock_block_fee: u64, mock_block_hash: Sha256Hash,
+        mock_parent_hash: Sha256Hash, expected_next_fee: u64, timestamp: u64,
+        fork_manager: &mut ForkManager, blocks_database: &mut BlocksDatabase,
+        block_fee_manager: &mut BlockFeeManager, longest_chain_queue: &mut LongestChainQueue,
     ) {
         // add block 7
         let mock_block: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockFee::new(

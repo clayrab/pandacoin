@@ -109,8 +109,7 @@ impl ForkManager {
     }
 
     pub async fn get_previous_ancestor_fork_block(
-        &self,
-        block_hash: &Sha256Hash,
+        &self, block_hash: &Sha256Hash,
     ) -> Option<(&Sha256Hash, &ForkBlock)> {
         if let Some(fork_block_pointer_hash) = self.fork_block_pointers.get(block_hash) {
             if fork_block_pointer_hash == block_hash {
@@ -132,14 +131,12 @@ impl ForkManager {
     }
 
     pub fn get_previous_ancestor_fork_block_hash(
-        &self,
-        block_hash: &Sha256Hash,
+        &self, block_hash: &Sha256Hash,
     ) -> Option<&Sha256Hash> {
         self.fork_block_pointers.get(block_hash)
     }
     pub fn get_fork_children_of_fork_block(
-        &self,
-        fork_block_hash: &Sha256Hash,
+        &self, fork_block_hash: &Sha256Hash,
     ) -> Option<&HashSet<Sha256Hash>> {
         if let Some(fork_block) = self.fork_blocks.get(fork_block_hash) {
             Some(&fork_block.fork_children)
@@ -149,9 +146,7 @@ impl ForkManager {
     }
 
     pub async fn get_next_descendant_fork_block_hash(
-        &self,
-        block_hash: &Sha256Hash,
-        blocks_database: &BlocksDatabase,
+        &self, block_hash: &Sha256Hash, blocks_database: &BlocksDatabase,
     ) -> Option<&Sha256Hash> {
         if let Some(past_fork_block_hash) = self.fork_block_pointers.get(block_hash) {
             let mut found_fork_block = None;
@@ -196,9 +191,7 @@ impl ForkManager {
 
     // recursive function for rolling forward, use recursion with a "tail call" to reverse order of calls while traversing via previous_block_hash
     fn roll_forward_back_of_fork_block(
-        from_hash: &Sha256Hash,
-        to_hash: &Sha256Hash,
-        fork_block: &mut ForkBlock,
+        from_hash: &Sha256Hash, to_hash: &Sha256Hash, fork_block: &mut ForkBlock,
         blocks_database: &BlocksDatabase,
     ) {
         let next_parent_block = blocks_database.get_block_by_hash(to_hash).unwrap();
@@ -216,9 +209,7 @@ impl ForkManager {
     }
 
     async fn roll_forward_on_fork(
-        &mut self,
-        this_block: &Box<dyn RawBlock>,
-        blocks_database: &mut BlocksDatabase,
+        &mut self, this_block: &Box<dyn RawBlock>, blocks_database: &mut BlocksDatabase,
     ) {
         if !self
             .fork_blocks
@@ -331,9 +322,7 @@ impl ForkManager {
 
     /// roll forward
     pub async fn roll_forward(
-        &mut self,
-        next_block: &Box<dyn RawBlock>,
-        blocks_database: &mut BlocksDatabase,
+        &mut self, next_block: &Box<dyn RawBlock>, blocks_database: &mut BlocksDatabase,
         longest_chain_queue: &LongestChainQueue,
     ) {
         println!("** roll forward ** {:?}", next_block.get_hash().clone());
@@ -491,9 +480,7 @@ impl ForkManager {
     }
 
     fn remove_all_children(
-        &mut self,
-        fork_block_hash: &Sha256Hash,
-        blocks_database: &mut BlocksDatabase,
+        &mut self, fork_block_hash: &Sha256Hash, blocks_database: &mut BlocksDatabase,
         excluded_branch: &Sha256Hash,
     ) {
         let fork_descendant_hashes = self.get_all_descendant_fork_block_hashes(
@@ -518,9 +505,7 @@ impl ForkManager {
         }
     }
     fn get_all_descendant_fork_block_hashes(
-        &self,
-        fork_blocks: &mut HashSet<Sha256Hash>,
-        fork_block_hash: &Sha256Hash,
+        &self, fork_blocks: &mut HashSet<Sha256Hash>, fork_block_hash: &Sha256Hash,
         excluded_branch: &Sha256Hash,
     ) -> HashSet<Sha256Hash> {
         for fork_child_hash in self

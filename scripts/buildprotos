@@ -1,0 +1,2 @@
+#!/bin/bash
+cargo run --bin build_protos --features="build_deps"

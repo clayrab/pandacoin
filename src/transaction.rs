@@ -8,7 +8,7 @@ use secp256k1::SecretKey;
 use std::convert::{TryFrom, TryInto};
 use std::io::Cursor;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Transaction {
     hash: Sha256Hash,
     transaction_proto: TransactionProto,
@@ -16,24 +16,19 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn new(
-        timestamp: u64,
-        inputs: Vec<OutputIdProto>,
-        outputs: Vec<OutputProto>,
-        txtype: TxType,
-        message: Vec<u8>,
-        secret_key: &SecretKey,
+        timestamp: u64, inputs: Vec<OutputIdProto>, outputs: Vec<OutputProto>, txtype: TxType,
+        message: Vec<u8>, secret_key: &SecretKey,
     ) -> Self {
-        // TODO generate a real sig
-        let signature = vec![0; 64];
+        // sig must be set to zeros before generating hash
         let mut transaction_proto = TransactionProto {
             timestamp,
             inputs,
             outputs,
             txtype: txtype as i32,
             message,
-            signature,
+            signature: vec![0; 64],
         };
-        let hash = transaction_proto.hash().try_into().unwrap();
+        let hash = hash_bytes(&transaction_proto.serialize());
         let sig = transaction_proto.sign(secret_key);
         transaction_proto.set_signature(sig);
         Transaction {
@@ -41,26 +36,23 @@ impl Transaction {
             transaction_proto,
         }
     }
-    pub fn from_proto(transaction_proto: TransactionProto) -> Self {
-        let hash = transaction_proto.hash().try_into().unwrap();
+    pub fn from_proto(mut transaction_proto: TransactionProto) -> Self {
+        // sig must be set to zeros before generating hash
+        let sig = transaction_proto.signature;
+        transaction_proto.signature = vec![0; 64];
+        let hash = hash_bytes(&transaction_proto.serialize());
+        transaction_proto.signature = sig;
         Transaction {
             hash,
             transaction_proto,
         }
     }
-    pub fn transform_transaction_protos(
-        transaction_protos: Vec<TransactionProto>,
-    ) -> Vec<Transaction> {
-        transaction_protos
-            .into_iter()
-            .map(Transaction::from_proto)
-            .collect()
+    pub fn into_proto(self) -> TransactionProto {
+        self.transaction_proto
     }
     pub fn get_hash(&self) -> &Sha256Hash {
-        //&self.hash.unwrap().try_into().unwrap()
         &self.hash
     }
-
     pub fn get_timestamp(&self) -> u64 {
         self.transaction_proto.timestamp
     }
@@ -85,12 +77,8 @@ impl Transaction {
 }
 
 impl TransactionProto {
-    pub fn hash(&self) -> Vec<u8> {
-        hash_bytes(&self.serialize()).to_vec()
-    }
     pub fn sign(&self, secret_key: &SecretKey) -> Secp256k1SignatureCompact {
         assert_eq!(self.signature, [0; 64]);
-
         sign_message(&self.serialize(), secret_key)
     }
     pub fn set_signature(&mut self, signature: Secp256k1SignatureCompact) {
@@ -102,7 +90,6 @@ impl TransactionProto {
         self.encode(&mut buf).unwrap();
         buf
     }
-
     pub fn deserialize(buf: &Vec<u8>) -> TransactionProto {
         TransactionProto::decode(&mut Cursor::new(buf)).unwrap()
     }
@@ -110,7 +97,6 @@ impl TransactionProto {
 
 impl TryFrom<i32> for TxType {
     type Error = ();
-
     fn try_from(v: i32) -> Result<Self, Self::Error> {
         match v {
             x if x == TxType::Normal as i32 => Ok(TxType::Normal),

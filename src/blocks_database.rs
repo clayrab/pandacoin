@@ -42,11 +42,8 @@ impl BlocksDatabase {
     }
 
     pub fn get_block_hash_from_fork_by_id(
-        &self,
-        target_block_id: u32,
-        starting_search_block_hash: &Sha256Hash,
-        longest_chain_queue: &LongestChainQueue,
-        fork_manager: &ForkManager,
+        &self, target_block_id: u32, starting_search_block_hash: &Sha256Hash,
+        longest_chain_queue: &LongestChainQueue, fork_manager: &ForkManager,
     ) -> Option<&Box<dyn RawBlock>> {
         let starting_search_block = self.get_block_by_hash(starting_search_block_hash).unwrap();
         let mut fork_block_hash = starting_search_block.get_hash();

@@ -226,10 +226,8 @@ impl AbstractBlockchain for Blockchain {
 impl Blockchain {
     /// Create new `Blockchain`
     pub async fn new(
-        fork_manager: ForkManager,
-        longest_chain_queue: LongestChainQueue,
-        blocks_database: BlocksDatabase,
-        block_fee_manager: BlockFeeManager,
+        fork_manager: ForkManager, longest_chain_queue: LongestChainQueue,
+        blocks_database: BlocksDatabase, block_fee_manager: BlockFeeManager,
         constants: Arc<Constants>,
         utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
         mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
@@ -366,7 +364,7 @@ impl Blockchain {
                 return false;
             }
 
-            futures::stream::iter(block.get_transactions())
+            futures::stream::iter(block.transactions_iter())
                 .all(|transaction| {
                     self.validate_transaction(previous_block, transaction, fork_chains)
                 })
@@ -375,10 +373,7 @@ impl Blockchain {
     }
 
     async fn validate_transaction(
-        &self,
-        previous_block: &Box<dyn RawBlock>,
-        tx: &Transaction,
-        fork_chains: &ForkChains,
+        &self, previous_block: &Box<dyn RawBlock>, tx: &Transaction, fork_chains: &ForkChains,
     ) -> bool {
         //println!("validate_transaction type{}");
         match tx.get_txtype() {

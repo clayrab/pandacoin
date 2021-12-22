@@ -10,6 +10,7 @@ pub mod keypair;
 pub mod keypair_store;
 pub mod longest_chain_queue;
 pub mod mempool;
+pub mod miniblock;
 pub mod miniblock_manager;
 pub mod output;
 #[path = "proto/out/panda_protos.rs"]

@@ -1,16 +1,15 @@
 use crate::crypto::hash_bytes;
-use crate::panda_protos::RawBlockProto;
+use crate::miniblock::MiniBlock;
+use crate::panda_protos::{MiniBlockProto, RawBlockProto};
 use crate::transaction::Transaction;
 use crate::types::Sha256Hash;
 use crate::utxoset::AbstractUtxoSet;
-use async_std::sync::RwLock;
 use prost::Message;
 use secp256k1::{PublicKey, Signature};
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::io::Cursor;
 use std::str::FromStr;
-use std::sync::Arc;
 /// This structure is a basic block, it should be 1-to-1 with the physical data which will be serialized
 /// and send over the wire and stored on disk.
 /// We provide a useless default implementation for the sake of making different mock RawBlocks easier.
@@ -41,54 +40,52 @@ pub trait RawBlock: Debug + Send + Sync {
     fn get_id(&self) -> u32 {
         0
     }
-    fn get_transactions(&self) -> &Vec<Transaction>;
+    // fn get_transactions(&self) -> &Vec<Transaction>;
+    fn get_mini_blocks(&self) -> &Vec<MiniBlock>;
+
+    fn transactions_iter(&self) -> TransactionsIter<'_> {
+        TransactionsIter {
+            index: 0,
+            mini_block_index: 0,
+            mini_blocks: self.get_mini_blocks(),
+        }
+    }
 }
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct PandaBlock {
     hash: Sha256Hash,
     fee: u64,
-    transactions: Vec<Transaction>,
+    mini_blocks: Vec<MiniBlock>,
     block_proto: RawBlockProto,
 }
 
 impl PandaBlock {
-    pub async fn new(
-        id: u32,
-        creator: PublicKey,
-        timestamp: u64,
-        previous_block_hash: Sha256Hash,
-        utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
-        // transactions: Vec<Transaction>,
+    pub async fn from_serialized_proto(
+        serialized_block_proto: Vec<u8>, utxoset: &Box<dyn AbstractUtxoSet + Send + Sync>,
     ) -> Self {
-        // TODO add transactions
-        // TODO generate a real signature
-        let signature = Signature::from_compact(&[0; 64]).unwrap();
-        let block_proto = RawBlockProto {
-            id,
-            timestamp,
-            creator: creator.serialize().to_vec(),
-            signature: signature.serialize_compact().to_vec(),
-            previous_block_hash: previous_block_hash.to_vec(),
-            merkle_root: vec![],
-            transactions: vec![],
-        };
-        let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
-        let utxoset = utxoset_ref.read().await;
-        let block_fees = utxoset.block_fees(&block_proto);
+        let hash = hash_bytes(&serialized_block_proto);
+        let mut block_proto = RawBlockProto::deserialize(&serialized_block_proto);
+        let fee = utxoset.block_fees(&block_proto);
+        // use "partial move" to move the mini-blocks out of the proto and into the Block as full MiniBlocks
+        let mini_blocks: Vec<MiniBlock> = block_proto
+            .mini_blocks
+            .into_iter()
+            .map(|mini_block_proto| MiniBlock::from_proto(mini_block_proto))
+            .collect();
+        // Set the proto transactions to an empty vector to avoid ownership issues.
+        block_proto.mini_blocks = vec![];
+
         PandaBlock {
             hash,
-            fee: block_fees,
+            fee,
             block_proto,
-            transactions: vec![],
+            mini_blocks,
         }
     }
 
     pub fn new_genesis_block(
-        creator: PublicKey,
-        timestamp: u64,
-        block_fee: u64,
+        creator: PublicKey, timestamp: u64, block_fee: u64,
     ) -> Box<dyn RawBlock> {
-        // TODO add transactions
         let signature = Signature::from_compact(&[0; 64]).unwrap();
         let block_proto = RawBlockProto {
             id: 0,
@@ -98,22 +95,30 @@ impl PandaBlock {
             previous_block_hash: [0; 32].to_vec(),
             merkle_root: vec![],
             transactions: vec![],
+            mini_blocks: vec![],
         };
-        let hash: Sha256Hash = block_proto.generate_hash().try_into().unwrap();
+        let hash = hash_bytes(&block_proto.serialize());
         let block = PandaBlock {
             hash,
             fee: block_fee,
             block_proto,
-            transactions: vec![],
+            mini_blocks: vec![],
         };
         Box::new(block)
+    }
+
+    pub fn into_proto(mut self) -> RawBlockProto {
+        let mini_blocks: Vec<MiniBlockProto> = self
+            .mini_blocks
+            .into_iter()
+            .map(|mini_block| mini_block.into_proto())
+            .collect();
+        self.block_proto.mini_blocks = mini_blocks;
+        self.block_proto
     }
 }
 
 impl RawBlockProto {
-    pub fn generate_hash(&self) -> Vec<u8> {
-        hash_bytes(&self.serialize()).to_vec()
-    }
     pub fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.reserve(self.encoded_len());
@@ -132,7 +137,6 @@ impl RawBlock for PandaBlock {
     }
     fn get_hash(&self) -> &Sha256Hash {
         &self.hash
-        //(*self.hash.as_ref()).try_into().unwrap()
     }
     fn get_block_fee(&self) -> u64 {
         self.fee
@@ -156,37 +160,105 @@ impl RawBlock for PandaBlock {
     fn get_id(&self) -> u32 {
         self.block_proto.id
     }
-    fn get_transactions(&self) -> &Vec<Transaction> {
-        &self.transactions
+    fn get_mini_blocks(&self) -> &Vec<MiniBlock> {
+        &self.mini_blocks
+    }
+}
+
+// struct TransactionsIter<'a>(&'a PandaBlock);
+pub struct TransactionsIter<'a> {
+    index: usize,
+    mini_block_index: usize,
+    mini_blocks: &'a Vec<MiniBlock>,
+}
+impl<'a> Iterator for TransactionsIter<'a> {
+    type Item = &'a Transaction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.index += 1;
+        let mut ret_transaction = None;
+        while ret_transaction.is_none() {
+            match self.mini_blocks.get(self.mini_block_index) {
+                Some(mini_block) => match mini_block.get_transactions().get(self.index - 1) {
+                    Some(transaction) => {
+                        ret_transaction = Some(transaction);
+                    }
+                    None => {
+                        self.index = 0;
+                        self.mini_block_index += 1;
+                    }
+                },
+                None => {
+                    return None;
+                }
+            }
+        }
+        ret_transaction
     }
 }
 
 #[cfg(test)]
 mod test {
-    // use crate::{
-    //     block::{PandaBlock, RawBlock},
-    //     test_utilities::globals_init::{
-    //         make_keypair_store_for_test, make_timestamp_generator_for_test,
-    //     },
-    // };
+    use crate::{
+        block::RawBlock,
+        crypto::sign_message,
+        keypair::Keypair,
+        miniblock::MiniBlock,
+        panda_protos::{
+            transaction_proto::TxType, MiniBlockProto, RawBlockProto, TransactionProto,
+        },
+        test_utilities::mock_utxoset::MockUtxoSet,
+        utxoset::AbstractUtxoSet,
+    };
 
-    // #[tokio::test]
-    // async fn new_block_fee_test() {
-    //     let keypair_store = make_keypair_store_for_test();
-    //     let timestamp_generator = make_timestamp_generator_for_test();
-    //     let block1 = PandaBlock::new(
-    //         0,
-    //         *keypair_store.get_keypair().get_public_key(),
-    //         timestamp_generator.get_timestamp(),
-    //         [0; 32],
-    //     );
-    //     timestamp_generator.advance(111);
-    //     let block2 = PandaBlock::new(
-    //         0,
-    //         *keypair_store.get_keypair().get_public_key(),
-    //         timestamp_generator.get_timestamp(),
-    //         [0; 32],
-    //     );
-    //     assert_eq!(block1.get_timestamp() + 111, block2.get_timestamp());
-    // }
+    use super::PandaBlock;
+
+    #[tokio::test]
+    async fn mini_block_test() {
+        let utxoset: Box<dyn AbstractUtxoSet + Send + Sync> = Box::new(MockUtxoSet::new());
+        let keypair_1 = Keypair::new();
+        let keypair_2 = Keypair::new();
+        let signature = sign_message(&[0; 32], keypair_2.get_secret_key());
+        let transaction_proto_1 = TransactionProto {
+            timestamp: 12345,
+            inputs: vec![],
+            outputs: vec![],
+            txtype: TxType::Normal as i32,
+            message: vec![],
+            signature: vec![],
+        };
+        let transaction_proto_2 = TransactionProto {
+            timestamp: 12345,
+            inputs: vec![],
+            outputs: vec![],
+            txtype: TxType::Normal as i32,
+            message: vec![],
+            signature: vec![],
+        };
+        let mini_block_proto = MiniBlockProto {
+            receiver: keypair_1.get_public_key().serialize().to_vec(),
+            creator: keypair_2.get_public_key().serialize().to_vec(),
+            signature: signature.to_vec(),
+            merkle_root: [4; 32].to_vec(),
+            transactions: vec![transaction_proto_1, transaction_proto_2],
+        };
+        let mini_block = MiniBlock::from_proto(mini_block_proto.clone());
+        let block_proto = RawBlockProto {
+            id: 123,
+            timestamp: 1234,
+            creator: keypair_1.get_public_key().serialize().to_vec(),
+            signature: signature.to_vec(),
+            previous_block_hash: [0; 32].to_vec(),
+            merkle_root: vec![],
+            transactions: vec![],
+            mini_blocks: vec![mini_block_proto],
+        };
+        let block = PandaBlock::from_serialized_proto(block_proto.serialize(), &utxoset).await;
+        let block_proto_again = block.clone().into_proto();
+        assert_eq!(block_proto, block_proto_again);
+        let block_again =
+            PandaBlock::from_serialized_proto(block_proto_again.serialize(), &utxoset).await;
+        assert_eq!(block.get_hash(), block_again.get_hash());
+        assert_eq!(block.get_mini_blocks()[0], mini_block);
+    }
 }

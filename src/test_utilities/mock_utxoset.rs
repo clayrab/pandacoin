@@ -31,16 +31,12 @@ impl AbstractUtxoSet for MockUtxoSet {
     fn roll_back(&mut self, _block: &Box<dyn RawBlock>) {}
     fn roll_forward(&mut self, _block: &Box<dyn RawBlock>) {}
     async fn is_output_spendable_at_block_id(
-        &self,
-        _output_id: &OutputIdProto,
-        _block_id: u32,
+        &self, _output_id: &OutputIdProto, _block_id: u32,
     ) -> bool {
         true
     }
     async fn is_output_spendable_in_fork_branch(
-        &self,
-        _output_id: &OutputIdProto,
-        _fork_chains: &ForkChains,
+        &self, _output_id: &OutputIdProto, _fork_chains: &ForkChains,
     ) -> bool {
         true
     }
