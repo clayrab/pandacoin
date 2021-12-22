@@ -18,8 +18,11 @@ pub struct MockRawBlockForBlockFee {
 }
 impl MockRawBlockForBlockFee {
     pub fn new(
-        mock_block_id: u32, mock_block_fee: u64, mock_block_hash: Sha256Hash,
-        mock_parent_hash: Sha256Hash, timestamp: u64,
+        mock_block_id: u32,
+        mock_block_fee: u64,
+        mock_block_hash: Sha256Hash,
+        mock_parent_hash: Sha256Hash,
+        timestamp: u64,
     ) -> Self {
         MockRawBlockForBlockFee {
             mock_block_id,
@@ -61,7 +64,9 @@ pub struct MockRawBlockForUTXOSet {
 }
 impl MockRawBlockForUTXOSet {
     pub fn new(
-        mock_block_id: u32, mock_block_hash: Sha256Hash, transactions: Vec<Transaction>,
+        mock_block_id: u32,
+        mock_block_hash: Sha256Hash,
+        transactions: Vec<Transaction>,
     ) -> Self {
         let mini_block_transactions: Vec<TransactionProto> =
             transactions.into_iter().map(|tx| tx.into_proto()).collect();
@@ -104,8 +109,12 @@ pub struct MockRawBlockForBlockchain {
 }
 impl MockRawBlockForBlockchain {
     pub fn new(
-        mock_block_id: u32, mock_block_fee: u64, mock_block_hash: Sha256Hash,
-        mock_parent_hash: Sha256Hash, timestamp: u64, transactions: Vec<Transaction>,
+        mock_block_id: u32,
+        mock_block_fee: u64,
+        mock_block_hash: Sha256Hash,
+        mock_parent_hash: Sha256Hash,
+        timestamp: u64,
+        transactions: Vec<Transaction>,
     ) -> Self {
         let mini_block_transactions: Vec<TransactionProto> =
             transactions.into_iter().map(|tx| tx.into_proto()).collect();

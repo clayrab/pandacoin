@@ -41,7 +41,8 @@ impl MiniblockManager {
         }
     }
     pub async fn new_miniblock_from_difference(
-        &self, their_set: &HashSet<Sha256Hash>,
+        &self,
+        their_set: &HashSet<Sha256Hash>,
     ) -> MiniBlockProto {
         //     let mini_block_proto = MiniBlockProto {
         //         receiver: keypair_1.get_public_key().serialize().to_vec(),

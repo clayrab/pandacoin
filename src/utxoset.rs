@@ -100,10 +100,14 @@ pub trait AbstractUtxoSet: Debug {
     fn roll_back(&mut self, block: &Box<dyn RawBlock>);
     fn roll_forward(&mut self, block: &Box<dyn RawBlock>);
     async fn is_output_spendable_at_block_id(
-        &self, output_id: &OutputIdProto, block_id: u32,
+        &self,
+        output_id: &OutputIdProto,
+        block_id: u32,
     ) -> bool;
     async fn is_output_spendable_in_fork_branch(
-        &self, output_id: &OutputIdProto, fork_chains: &ForkChains,
+        &self,
+        output_id: &OutputIdProto,
+        fork_chains: &ForkChains,
     ) -> bool;
     fn get_total_for_inputs(&self, output_ids: Vec<OutputIdProto>) -> Option<u64>;
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>>;
@@ -161,7 +165,9 @@ impl UtxoSet {
     /// a fork, in which case we need to know it's status at the common ancestor
     /// block.
     fn longest_chain_spent_status(
-        &self, output_id: &OutputIdProto, block_id: u32,
+        &self,
+        output_id: &OutputIdProto,
+        block_id: u32,
     ) -> LongestChainSpentTime {
         match &self.status_map.get(output_id) {
             Some(status) => {
@@ -363,7 +369,9 @@ impl AbstractUtxoSet for UtxoSet {
     /// block). The ForkTuple allows us to check for Unspent/Spent status along the fork's
     /// potential new chain more quickly. This can be further optimized in the future.
     async fn is_output_spendable_at_block_id(
-        &self, output_id: &OutputIdProto, block_id: u32,
+        &self,
+        output_id: &OutputIdProto,
+        block_id: u32,
     ) -> bool {
         let longest_chain_spent_time = self.longest_chain_spent_status(output_id, block_id);
         longest_chain_spent_time == LongestChainSpentTime::BetweenUnspentAndSpent
@@ -373,7 +381,9 @@ impl AbstractUtxoSet for UtxoSet {
     /// root block of a fork). The ForkTuple allows us to check for Unspent/Spent status along the fork's
     /// potential new chain more quickly. This can be further optimized in the future.
     async fn is_output_spendable_in_fork_branch(
-        &self, output_id: &OutputIdProto, fork_chains: &ForkChains,
+        &self,
+        output_id: &OutputIdProto,
+        fork_chains: &ForkChains,
     ) -> bool {
         // first we figure out if the output has been spent at the ancestor block
         let longest_chain_spent_time =

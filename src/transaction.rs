@@ -16,8 +16,12 @@ pub struct Transaction {
 
 impl Transaction {
     pub fn new(
-        timestamp: u64, inputs: Vec<OutputIdProto>, outputs: Vec<OutputProto>, txtype: TxType,
-        message: Vec<u8>, secret_key: &SecretKey,
+        timestamp: u64,
+        inputs: Vec<OutputIdProto>,
+        outputs: Vec<OutputProto>,
+        txtype: TxType,
+        message: Vec<u8>,
+        secret_key: &SecretKey,
     ) -> Self {
         // sig must be set to zeros before generating hash
         let mut transaction_proto = TransactionProto {
@@ -103,13 +107,15 @@ impl TryFrom<i32> for TxType {
     }
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
-    use crate::{panda_protos::{OutputProto, OutputIdProto, transaction_proto::TxType}, test_utilities::globals_init::make_timestamp_generator_for_test, keypair::Keypair, crypto::verify_bytes_message};
     use super::Transaction;
+    use crate::{
+        crypto::verify_bytes_message,
+        keypair::Keypair,
+        panda_protos::{transaction_proto::TxType, OutputIdProto, OutputProto},
+        test_utilities::globals_init::make_timestamp_generator_for_test,
+    };
 
     #[tokio::test]
     async fn transaction_signature_test() {
@@ -125,6 +131,10 @@ mod tests {
             vec![],
             keypair.get_secret_key(),
         );
-        assert!(verify_bytes_message(tx.get_hash(), tx.get_signature(), &keypair.get_public_key().serialize().to_vec()));
+        assert!(verify_bytes_message(
+            tx.get_hash(),
+            tx.get_signature(),
+            &keypair.get_public_key().serialize().to_vec()
+        ));
     }
 }

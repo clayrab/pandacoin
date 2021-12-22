@@ -3,9 +3,7 @@ use crate::{
     types::{PandaAddress, Sha256Hash},
 };
 use secp256k1::PublicKey;
-use std::{
-    convert::TryInto,
-};
+use std::convert::TryInto;
 
 impl OutputIdProto {
     /// Create new `OutputIdProto`

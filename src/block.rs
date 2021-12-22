@@ -60,7 +60,8 @@ pub struct PandaBlock {
 
 impl PandaBlock {
     pub async fn from_serialized_proto(
-        serialized_block_proto: Vec<u8>, utxoset: &Box<dyn AbstractUtxoSet + Send + Sync>,
+        serialized_block_proto: Vec<u8>,
+        utxoset: &Box<dyn AbstractUtxoSet + Send + Sync>,
     ) -> Self {
         let hash = hash_bytes(&serialized_block_proto);
         let mut block_proto = RawBlockProto::deserialize(&serialized_block_proto);
@@ -83,7 +84,9 @@ impl PandaBlock {
     }
 
     pub fn new_genesis_block(
-        creator: PublicKey, timestamp: u64, block_fee: u64,
+        creator: PublicKey,
+        timestamp: u64,
+        block_fee: u64,
     ) -> Box<dyn RawBlock> {
         let signature = Signature::from_compact(&[0; 64]).unwrap();
         let block_proto = RawBlockProto {
