@@ -1,5 +1,5 @@
 
-#[derive(Clone, Eq, PartialEq, ::prost::Message)]
+#[derive(Clone, Eq, Hash, PartialEq, ::prost::Message)]
 pub struct OutputIdProto {
     #[prost(bytes="vec", tag="1")]
     pub tx_id: ::prost::alloc::vec::Vec<u8>,
