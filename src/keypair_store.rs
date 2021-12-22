@@ -70,16 +70,12 @@ impl KeypairStore {
         let decrypted_buffer: Vec<u8>;
         if !path.exists() {
             println!("Creating key file");
-            decrypted_buffer = KeypairStore::create_key_file(
-                &"data/test/testwallet",
-                &Some(String::from("asdf")),
-            );
+            decrypted_buffer =
+                KeypairStore::create_key_file(&"data/test/testwallet", &Some(String::from("asdf")));
         } else {
             println!("Reading key file");
-            decrypted_buffer = KeypairStore::read_key_file(
-                &"data/test/testwallet",
-                &Some(String::from("asdf")),
-            );
+            decrypted_buffer =
+                KeypairStore::read_key_file(&"data/test/testwallet", &Some(String::from("asdf")));
         }
         let keypair = Keypair::from_secret_slice(&decrypted_buffer).unwrap();
         KeypairStore {
