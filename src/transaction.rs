@@ -29,7 +29,7 @@ impl Transaction {
             signature: vec![0; 64],
         };
         let hash = hash_bytes(&transaction_proto.serialize());
-        let sig = transaction_proto.sign(secret_key);
+        let sig = sign_message(&hash, secret_key);
         transaction_proto.set_signature(sig);
         Transaction {
             hash,
@@ -77,10 +77,6 @@ impl Transaction {
 }
 
 impl TransactionProto {
-    pub fn sign(&self, secret_key: &SecretKey) -> Secp256k1SignatureCompact {
-        assert_eq!(self.signature, [0; 64]);
-        sign_message(&self.serialize(), secret_key)
-    }
     pub fn set_signature(&mut self, signature: Secp256k1SignatureCompact) {
         self.signature = signature.try_into().unwrap();
     }
@@ -104,5 +100,31 @@ impl TryFrom<i32> for TxType {
             x if x == TxType::Service as i32 => Ok(TxType::Service),
             _ => Err(()),
         }
+    }
+}
+
+
+
+
+#[cfg(test)]
+mod tests {
+    use crate::{panda_protos::{OutputProto, OutputIdProto, transaction_proto::TxType}, test_utilities::globals_init::make_timestamp_generator_for_test, keypair::Keypair, crypto::verify_bytes_message};
+    use super::Transaction;
+
+    #[tokio::test]
+    async fn transaction_signature_test() {
+        let timestamp_generator = make_timestamp_generator_for_test();
+        let keypair = Keypair::new();
+        let output = OutputProto::new(*keypair.get_public_key(), 2);
+        let input = OutputIdProto::new([1; 32], 0);
+        let tx = Transaction::new(
+            timestamp_generator.get_timestamp(),
+            vec![input],
+            vec![output],
+            TxType::Seed,
+            vec![],
+            keypair.get_secret_key(),
+        );
+        assert!(verify_bytes_message(tx.get_hash(), tx.get_signature(), &keypair.get_public_key().serialize().to_vec()));
     }
 }

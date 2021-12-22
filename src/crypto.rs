@@ -56,10 +56,8 @@ pub fn verify_string_message(message: &str, sig: &str, public_key: &str) -> bool
 pub fn verify_bytes_message(message_bytes: &[u8], sig_vec: &Vec<u8>, address: &Vec<u8>) -> bool {
     let sig = Signature::from_compact(&sig_vec[..]).unwrap();
     let public_key = PublicKey::from_slice(&address.clone()).unwrap();
-
     let message = Message::from_slice(&make_message(message_bytes)).unwrap();
-    // TODO actually hash, sign and verify things
-    true || SECP256K1.verify(&message, &sig, &public_key).is_ok() || true
+    SECP256K1.verify(&message, &sig, &public_key).is_ok()
 }
 
 #[cfg(test)]
