@@ -138,19 +138,13 @@ impl AbstractBlockchain for Blockchain {
                         utxoset.roll_forward(&block);
                         let mut mempool = self.context.mempool_ref.write().await;
                         mempool.roll_forward(&block);
-                        // OUTPUT_DB_GLOBAL
-                        //     .clone()
-                        //     .write()
-                        //     .unwrap()
-                        //     .roll_forward(&block.core());
                         self.roll_forward_max_reorg(&block).await;
                         self.blocks_database.insert(block);
-
                         // self.storage.roll_forward(&block).await;
                         AddBlockEvent::AcceptedAsLongestChain
                     } else {
                         // We are not on the longest chain
-                        if self.is_longer_chain(&fork_chains.new_chain, &fork_chains.old_chain) {
+                        if fork_chains.new_chain.len() > fork_chains.old_chain.len() {
                             assert_eq!(
                                 fork_chains.new_chain.len(),
                                 fork_chains.old_chain.len() + 1
@@ -169,11 +163,6 @@ impl AbstractBlockchain for Blockchain {
                                 utxoset.roll_back(block);
                                 let mut mempool = self.context.mempool_ref.write().await;
                                 mempool.roll_back(block);
-                                // OUTPUT_DB_GLOBAL
-                                //     .clone()
-                                //     .write()
-                                //     .unwrap()
-                                //     .roll_back(&block.core());
                                 // self.storage.roll_back(&block);
                             }
 
@@ -186,11 +175,6 @@ impl AbstractBlockchain for Blockchain {
                                 utxoset.roll_forward(block);
                                 let mut mempool = self.context.mempool_ref.write().await;
                                 mempool.roll_forward(block);
-                                // OUTPUT_DB_GLOBAL
-                                //     .clone()
-                                //     .write()
-                                //     .unwrap()
-                                //     .roll_forward(&block.core());
                                 // self.storage.roll_forward(block).await;
                             }
                             // Wind the old chain as a fork chain
@@ -199,11 +183,6 @@ impl AbstractBlockchain for Blockchain {
                                     self.blocks_database.get_block_by_hash(block_hash).unwrap();
                                 let mut utxoset = self.context.utxoset_ref.write().await;
                                 utxoset.roll_forward_on_fork(block);
-                                // roll_forward_on_fork
-                                //     .clone()
-                                //     .write()
-                                //     .unwrap()
-                                //     .roll_back(&block.core());
                                 // self.storage.roll_back(&block);
                             }
 
@@ -330,23 +309,18 @@ impl Blockchain {
                 info!("invalid block, previous block not found");
                 return false;
             }
-            if self
-                .blocks_database
-                .get_block_by_hash(&previous_block_hash)
-                .unwrap()
-                .get_id()
-                + 1
-                != block.get_id()
-            {
-                error!("Invalid block, wrong block id");
-                return false;
-            }
-
+            // We need previous block to validate a lot of things
             let previous_block = self
                 .blocks_database
                 .get_block_by_hash(&previous_block_hash)
                 .unwrap();
 
+            // The block id must be correct(+1 from previous block by hash)
+            if previous_block.get_id() + 1 != block.get_id() {
+                error!("Invalid block, wrong block id");
+                return false;
+            }
+            // the block fee must be sufficient
             let next_fee = self
                 .block_fee_manager
                 .get_next_fee_on_fork(
@@ -360,12 +334,18 @@ impl Blockchain {
                 error!("Invalid block, insufficient fee");
                 return false;
             }
-
-            if previous_block.get_timestamp() >= block.get_timestamp() {
+            // the timestamp must be at least 1 ms greater than the previous block
+            if previous_block.get_timestamp() > block.get_timestamp() {
                 error!("Invalid block, timestamp must be greater than previous block");
                 return false;
             }
+            // the merkle root must be correctly computed
 
+            if block.get_merkle_root() != block.get_merkle_tree().get_root().unwrap() {
+                error!("Invalid block, merkle root does not match tree");
+                return false;
+            }
+            // all the transactions must be valid
             futures::stream::iter(block.transactions_iter())
                 .all(|transaction| {
                     self.validate_transaction(previous_block, transaction, fork_chains)
@@ -444,10 +424,6 @@ impl Blockchain {
                 true
             }
         }
-    }
-
-    fn is_longer_chain(&self, new_chain: &Vec<Sha256Hash>, old_chain: &Vec<Sha256Hash>) -> bool {
-        new_chain.len() > old_chain.len()
     }
 }
 

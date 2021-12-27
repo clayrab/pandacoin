@@ -1,5 +1,6 @@
 use crate::{
     block::RawBlock,
+    merkle_tree_manager::MerkleTree,
     miniblock::MiniBlock,
     panda_protos::{MiniBlockProto, TransactionProto},
     transaction::Transaction,
@@ -15,6 +16,7 @@ pub struct MockRawBlockForBlockFee {
     mock_parent_hash: Sha256Hash,
     timestamp: u64,
     mini_blocks: Vec<MiniBlock>,
+    merkle_tree: MerkleTree,
 }
 impl MockRawBlockForBlockFee {
     pub fn new(
@@ -31,6 +33,7 @@ impl MockRawBlockForBlockFee {
             mock_parent_hash,
             timestamp,
             mini_blocks: vec![],
+            merkle_tree: MerkleTree::new(vec![].iter()),
         }
     }
 }
@@ -53,6 +56,9 @@ impl RawBlock for MockRawBlockForBlockFee {
     fn get_mini_blocks(&self) -> &Vec<MiniBlock> {
         &self.mini_blocks
     }
+    fn get_merkle_tree(&self) -> &MerkleTree {
+        &self.merkle_tree
+    }
 }
 
 /// This Mock RawBlock is used for testing the UTXO Set
@@ -61,6 +67,7 @@ pub struct MockRawBlockForUTXOSet {
     mock_block_id: u32,
     mock_block_hash: Sha256Hash,
     mini_blocks: Vec<MiniBlock>,
+    merkle_tree: MerkleTree,
 }
 impl MockRawBlockForUTXOSet {
     pub fn new(
@@ -68,13 +75,13 @@ impl MockRawBlockForUTXOSet {
         mock_block_hash: Sha256Hash,
         transactions: Vec<Transaction>,
     ) -> Self {
+        let merkle_tree = MerkleTree::new(transactions.iter());
         let mini_block_transactions: Vec<TransactionProto> =
             transactions.into_iter().map(|tx| tx.into_proto()).collect();
         let mini_block_proto = MiniBlockProto {
             receiver: vec![],
             creator: vec![],
             signature: vec![],
-            merkle_root: vec![],
             transactions: mini_block_transactions,
         };
         let mini_block = MiniBlock::from_proto(mini_block_proto);
@@ -82,6 +89,7 @@ impl MockRawBlockForUTXOSet {
             mock_block_id,
             mock_block_hash,
             mini_blocks: vec![mini_block],
+            merkle_tree,
         }
     }
 }
@@ -95,6 +103,9 @@ impl RawBlock for MockRawBlockForUTXOSet {
     fn get_mini_blocks(&self) -> &Vec<MiniBlock> {
         &self.mini_blocks
     }
+    fn get_merkle_tree(&self) -> &MerkleTree {
+        &self.merkle_tree
+    }
 }
 
 /// This Mock RawBlock is used for testing the blockchain Set
@@ -106,6 +117,8 @@ pub struct MockRawBlockForBlockchain {
     mock_parent_hash: Sha256Hash,
     timestamp: u64,
     mini_blocks: Vec<MiniBlock>,
+    merkle_tree: MerkleTree,
+    merkle_root: Sha256Hash,
 }
 impl MockRawBlockForBlockchain {
     pub fn new(
@@ -116,13 +129,14 @@ impl MockRawBlockForBlockchain {
         timestamp: u64,
         transactions: Vec<Transaction>,
     ) -> Self {
+        let merkle_tree = MerkleTree::new(transactions.iter());
+        let merkle_root = (*merkle_tree.get_root()).unwrap();
         let mini_block_transactions: Vec<TransactionProto> =
             transactions.into_iter().map(|tx| tx.into_proto()).collect();
         let mini_block_proto = MiniBlockProto {
             receiver: vec![],
             creator: vec![],
             signature: vec![],
-            merkle_root: vec![],
             transactions: mini_block_transactions,
         };
         let mini_block = MiniBlock::from_proto(mini_block_proto);
@@ -134,6 +148,8 @@ impl MockRawBlockForBlockchain {
             mock_parent_hash,
             timestamp,
             mini_blocks: vec![mini_block],
+            merkle_tree,
+            merkle_root,
         }
     }
 }
@@ -156,26 +172,34 @@ impl RawBlock for MockRawBlockForBlockchain {
     fn get_mini_blocks(&self) -> &Vec<MiniBlock> {
         &self.mini_blocks
     }
+    fn get_merkle_tree(&self) -> &MerkleTree {
+        &self.merkle_tree
+    }
+    fn get_merkle_root(&self) -> Sha256Hash {
+        self.merkle_root
+    }
 }
 
 /// This Mock RawBlock is used for testing the blockchain Set
 #[derive(Debug)]
 pub struct MockRawBlockForForkManager {
     mini_blocks: Vec<MiniBlock>,
+    merkle_tree: MerkleTree,
 }
 impl MockRawBlockForForkManager {
     pub fn new() -> Self {
         MockRawBlockForForkManager {
             mini_blocks: vec![],
+            merkle_tree: MerkleTree::new(vec![].iter()),
         }
     }
 }
 
 impl RawBlock for MockRawBlockForForkManager {
-    // fn get_transactions(&self) -> &Vec<Transaction> {
-    //     &self.transactions
-    // }
     fn get_mini_blocks(&self) -> &Vec<MiniBlock> {
         &self.mini_blocks
+    }
+    fn get_merkle_tree(&self) -> &MerkleTree {
+        &self.merkle_tree
     }
 }

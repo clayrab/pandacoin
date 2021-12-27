@@ -27,7 +27,7 @@ impl MiniBlock {
         let transactions: Vec<Transaction> = mini_block_proto
             .transactions
             .into_iter()
-            .map(|tx_proto| Transaction::from_proto(tx_proto))
+            .map(Transaction::from_proto)
             .collect();
         // Set the proto transactions to an empty vector to avoid ownership issues.
         mini_block_proto.transactions = vec![];
@@ -50,7 +50,7 @@ impl MiniBlock {
         let transactions: Vec<Transaction> = mini_block_proto
             .transactions
             .into_iter()
-            .map(|tx_proto| Transaction::from_proto(tx_proto))
+            .map(Transaction::from_proto)
             .collect();
         // Set the proto transactions to an empty vector to avoid ownership issues.
         mini_block_proto.transactions = vec![];
@@ -90,9 +90,6 @@ impl MiniBlock {
     }
     pub fn get_signature(&self) -> Signature {
         Signature::from_compact(&self.mini_block_proto.signature[..]).unwrap()
-    }
-    pub fn get_merkle_root(&self) -> &Sha256Hash {
-        self.mini_block_proto.merkle_root[..].try_into().unwrap()
     }
 }
 
@@ -134,7 +131,6 @@ mod test {
             receiver: keypair_1.get_public_key().serialize().to_vec(),
             creator: keypair_2.get_public_key().serialize().to_vec(),
             signature: signature.to_vec(),
-            merkle_root: [4; 32].to_vec(),
             transactions: vec![transaction_proto],
         };
         let serialized_mini_block_proto = mini_block_proto.serialize();
@@ -161,10 +157,6 @@ mod test {
             mini_block_proto.signature
         );
         assert_eq!(
-            mini_block.get_merkle_root().to_vec(),
-            mini_block_proto.merkle_root
-        );
-        assert_eq!(
             mini_block.get_transactions().len(),
             mini_block_proto.transactions.len()
         );
@@ -186,10 +178,6 @@ mod test {
         assert_eq!(
             mini_block_2.get_signature().serialize_compact().to_vec(),
             mini_block_proto.signature
-        );
-        assert_eq!(
-            mini_block_2.get_merkle_root().to_vec(),
-            mini_block_proto.merkle_root
         );
         assert_eq!(
             mini_block_2.get_transactions().len(),

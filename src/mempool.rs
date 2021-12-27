@@ -31,9 +31,8 @@ struct MempoolContext {
 pub struct Mempool {
     // track the latest block in mempool itself so we don't have to get it from some Arc<Mutex> elsewhere
     block_count: u32,
-    // Do we memoize the current set? yes...
+    // The current set of transactions that we are the broker for
     current_set: HashSet<Sha256Hash>,
-    //current_set: HashSet,
     // tx-hash -> tx
     transactions: HashMap<Sha256Hash, Transaction>,
     // maps inputs to transactions

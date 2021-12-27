@@ -5,7 +5,7 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIter
 use crate::block::RawBlock;
 use crate::blockchain::ForkChains;
 use crate::constants::Constants;
-use crate::panda_protos::{OutputIdProto, OutputProto, RawBlockProto, TransactionProto};
+use crate::panda_protos::{OutputIdProto, OutputProto, TransactionProto};
 use crate::types::Sha256Hash;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -113,7 +113,6 @@ pub trait AbstractUtxoSet: Debug {
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>>;
     fn output_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto>;
     fn transaction_fees(&self, tx: &TransactionProto) -> u64;
-    fn block_fees(&self, block: &RawBlockProto) -> u64;
 }
 
 #[derive(Debug)]
@@ -151,7 +150,7 @@ impl UtxoSet {
         );
         utxoset
     }
-    ///
+    /// get total amount available from a Vec of Outputs
     pub fn get_total_for_outputs(outputs: &Vec<OutputProto>) -> u64 {
         if outputs.is_empty() {
             0
@@ -500,14 +499,6 @@ impl AbstractUtxoSet for UtxoSet {
         let output_amt: u64 = tx.outputs.iter().map(|output| output.amount()).sum();
         // TODO protect this from overflows, this needs to be asserted before computed or something.
         input_amt - output_amt
-    }
-    fn block_fees(&self, block: &RawBlockProto) -> u64 {
-        block
-            .transactions
-            .iter()
-            .map(|tx| self.transaction_fees(tx))
-            .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
-            .unwrap()
     }
 }
 
@@ -1002,19 +993,12 @@ mod test {
             assert_eq!(1, fee);
         }
 
-        let block_proto = RawBlockProto {
-            id: 1,
-            timestamp: 0,
-            creator: vec![],
-            signature: vec![],
-            previous_block_hash: [2; 32].to_vec(),
-            merkle_root: vec![],
-            transactions: block_2_txs,
-            mini_blocks: vec![],
-        };
-
         //utxo_set.roll_forward(&mock_block_2);
-        let total_fee = utxo_set.block_fees(&block_proto);
+        let total_fee = block_2_txs
+            .iter()
+            .map(|tx| utxo_set.transaction_fees(tx))
+            .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
+            .unwrap();
         assert_eq!(4, total_fee);
     }
 }
