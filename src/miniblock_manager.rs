@@ -71,7 +71,6 @@ impl MiniblockManager {
                 .get_public_key()
                 .serialize()
                 .to_vec(),
-            merkle_root: vec![],
             transactions: vec![],
         }
     }

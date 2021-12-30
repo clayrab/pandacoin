@@ -29,8 +29,7 @@ message MiniBlockProto {
     bytes receiver = 1;
     bytes creator = 2;
     bytes signature = 3;
-    bytes merkle_root = 4;
-    repeated TransactionProto transactions = 5;
+    repeated TransactionProto transactions = 4;
 }
 
 message RawBlockProto {

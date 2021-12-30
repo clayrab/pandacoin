@@ -1,4 +1,5 @@
 use crate::crypto::hash_bytes;
+use crate::merkle_tree_manager::MerkleTree;
 use crate::miniblock::MiniBlock;
 use crate::panda_protos::{MiniBlockProto, RawBlockProto};
 use crate::transaction::Transaction;
@@ -40,6 +41,10 @@ pub trait RawBlock: Debug + Send + Sync {
     fn get_id(&self) -> u32 {
         0
     }
+    fn get_merkle_root(&self) -> Sha256Hash {
+        [2; 32]
+    }
+    fn get_merkle_tree(&self) -> &MerkleTree;
     fn get_mini_blocks(&self) -> &Vec<MiniBlock>;
     fn transactions_iter(&self) -> TransactionsIter<'_> {
         TransactionsIter {
@@ -54,6 +59,7 @@ pub trait RawBlock: Debug + Send + Sync {
 pub struct PandaBlock {
     hash: Sha256Hash,
     fee: u64,
+    merkle_tree: MerkleTree,
     mini_blocks: Vec<MiniBlock>,
     block_proto: RawBlockProto,
 }
@@ -65,20 +71,26 @@ impl PandaBlock {
     ) -> Self {
         let hash = hash_bytes(&serialized_block_proto);
         let mut block_proto = RawBlockProto::deserialize(&serialized_block_proto);
-        let fee = utxoset.block_fees(&block_proto);
+
         // use "partial move" to move the mini-blocks out of the proto and into the Block as full MiniBlocks
         let mini_blocks: Vec<MiniBlock> = block_proto
             .mini_blocks
             .into_iter()
-            .map(|mini_block_proto| MiniBlock::from_proto(mini_block_proto))
+            .map(MiniBlock::from_proto)
             .collect();
         // Set the proto transactions to an empty vector to avoid ownership issues.
         block_proto.mini_blocks = vec![];
-
+        // make a merkle tree from the tx in the mini blocks
+        let merkle_tree = MerkleTree::new(TransactionsIter::new(&mini_blocks));
+        let fee = TransactionsIter::new(&mini_blocks)
+            .map(|tx| utxoset.transaction_fees(tx.get_transaction_proto()))
+            .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
+            .unwrap();
         PandaBlock {
             hash,
             fee,
             block_proto,
+            merkle_tree,
             mini_blocks,
         }
     }
@@ -88,6 +100,7 @@ impl PandaBlock {
         timestamp: u64,
         block_fee: u64,
     ) -> Box<dyn RawBlock> {
+        // TODO add Seed Tx here.
         let signature = Signature::from_compact(&[0; 64]).unwrap();
         let block_proto = RawBlockProto {
             id: 0,
@@ -96,14 +109,17 @@ impl PandaBlock {
             signature: signature.serialize_compact().to_vec(),
             previous_block_hash: [0; 32].to_vec(),
             merkle_root: vec![],
-            transactions: vec![],
             mini_blocks: vec![],
         };
         let hash = hash_bytes(&block_proto.serialize());
+        // make a merkle tree from the tx in the mini blocks
+        let merkle_tree = MerkleTree::new(TransactionsIter::new(&vec![]));
+
         let block = PandaBlock {
             hash,
             fee: block_fee,
             block_proto,
+            merkle_tree,
             mini_blocks: vec![],
         };
         Box::new(block)
@@ -153,11 +169,18 @@ impl RawBlock for PandaBlock {
     }
     fn get_previous_block_hash(&self) -> Sha256Hash {
         // TODO Memoize this and return as a shared borrow?
+        //      Or, change the return type to Vec<u8>?
         self.block_proto
             .previous_block_hash
             .clone()
             .try_into()
             .unwrap()
+    }
+    fn get_merkle_root(&self) -> Sha256Hash {
+        self.block_proto.merkle_root.clone().try_into().unwrap()
+    }
+    fn get_merkle_tree(&self) -> &MerkleTree {
+        &self.merkle_tree
     }
     fn get_id(&self) -> u32 {
         self.block_proto.id
@@ -171,6 +194,23 @@ pub struct TransactionsIter<'a> {
     index: usize,
     mini_block_index: usize,
     mini_blocks: &'a Vec<MiniBlock>,
+}
+
+impl<'a> TransactionsIter<'a> {
+    pub fn new(mini_blocks: &'a Vec<MiniBlock>) -> Self {
+        TransactionsIter {
+            index: 0,
+            mini_block_index: 0,
+            mini_blocks,
+        }
+    }
+    pub fn len(&self) -> usize {
+        let mut ret_len = 0;
+        for mini_block in self.mini_blocks {
+            ret_len += mini_block.get_transactions().len();
+        }
+        ret_len
+    }
 }
 
 impl<'a> Iterator for TransactionsIter<'a> {
@@ -241,7 +281,6 @@ mod test {
             receiver: keypair_1.get_public_key().serialize().to_vec(),
             creator: keypair_2.get_public_key().serialize().to_vec(),
             signature: signature.to_vec(),
-            merkle_root: [4; 32].to_vec(),
             transactions: vec![transaction_proto_1, transaction_proto_2],
         };
         let mini_block = MiniBlock::from_proto(mini_block_proto.clone());
@@ -252,7 +291,6 @@ mod test {
             signature: signature.to_vec(),
             previous_block_hash: [0; 32].to_vec(),
             merkle_root: vec![],
-            transactions: vec![],
             mini_blocks: vec![mini_block_proto],
         };
         let block = PandaBlock::from_serialized_proto(block_proto.serialize(), &utxoset).await;

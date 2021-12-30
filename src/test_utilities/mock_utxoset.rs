@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     block::RawBlock,
     blockchain::ForkChains,
-    panda_protos::{OutputIdProto, OutputProto, RawBlockProto, TransactionProto},
+    panda_protos::{OutputIdProto, OutputProto, TransactionProto},
     utxoset::AbstractUtxoSet,
 };
 use async_trait::async_trait;
@@ -54,9 +54,6 @@ impl AbstractUtxoSet for MockUtxoSet {
         Some(self.mock_outputs.get(output_id).unwrap().clone())
     }
     fn transaction_fees(&self, _tx: &TransactionProto) -> u64 {
-        0
-    }
-    fn block_fees(&self, _block: &RawBlockProto) -> u64 {
         0
     }
 }

@@ -45,9 +45,7 @@ pub struct MiniBlockProto {
     pub creator: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "3")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes = "vec", tag = "4")]
-    pub merkle_root: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, repeated, tag = "5")]
+    #[prost(message, repeated, tag = "4")]
     pub transactions: ::prost::alloc::vec::Vec<TransactionProto>,
 }
 #[derive(Clone, Eq, PartialEq, ::prost::Message)]
@@ -64,8 +62,6 @@ pub struct RawBlockProto {
     pub signature: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "6")]
     pub merkle_root: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, repeated, tag = "7")]
-    pub transactions: ::prost::alloc::vec::Vec<TransactionProto>,
     #[prost(message, repeated, tag = "8")]
     pub mini_blocks: ::prost::alloc::vec::Vec<MiniBlockProto>,
 }
