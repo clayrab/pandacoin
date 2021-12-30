@@ -312,7 +312,6 @@
 <span id="312">312</span>
 <span id="313">313</span>
 <span id="314">314</span>
-<span id="315">315</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::block::RawBlock</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos::OutputIdProto</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transaction::Transaction</span>;
@@ -346,9 +345,8 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mempool</span> {
     <span class="comment">// track the latest block in mempool itself so we don&#39;t have to get it from some Arc&lt;Mutex&gt; elsewhere</span>
     <span class="ident">block_count</span>: <span class="ident">u32</span>,
-    <span class="comment">// Do we memoize the current set? yes...</span>
+    <span class="comment">// The current set of transactions that we are the broker for</span>
     <span class="ident">current_set</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span>,
-    <span class="comment">//current_set: HashSet,</span>
     <span class="comment">// tx-hash -&gt; tx</span>
     <span class="ident">transactions</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span>, <span class="ident">Transaction</span><span class="op">&gt;</span>,
     <span class="comment">// maps inputs to transactions</span>

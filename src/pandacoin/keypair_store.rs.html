@@ -232,11 +232,11 @@ will use for signing and as the keypair for a wallet to receive rewards and to r
         <span class="kw">if</span> <span class="op">!</span><span class="ident">path</span>.<span class="ident">exists</span>() {
             <span class="macro">println!</span>(<span class="string">&quot;Creating key file&quot;</span>);
             <span class="ident">decrypted_buffer</span> <span class="op">=</span>
-                <span class="ident">KeypairStore::create_key_file</span>(<span class="kw-2">&amp;</span><span class="string">&quot;data/test/testwallet&quot;</span>, <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="ident">String::from</span>(<span class="string">&quot;asdf&quot;</span>)));
+                <span class="ident">KeypairStore::create_key_file</span>(<span class="string">&quot;data/test/testwallet&quot;</span>, <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="ident">String::from</span>(<span class="string">&quot;asdf&quot;</span>)));
         } <span class="kw">else</span> {
             <span class="macro">println!</span>(<span class="string">&quot;Reading key file&quot;</span>);
             <span class="ident">decrypted_buffer</span> <span class="op">=</span>
-                <span class="ident">KeypairStore::read_key_file</span>(<span class="kw-2">&amp;</span><span class="string">&quot;data/test/testwallet&quot;</span>, <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="ident">String::from</span>(<span class="string">&quot;asdf&quot;</span>)));
+                <span class="ident">KeypairStore::read_key_file</span>(<span class="string">&quot;data/test/testwallet&quot;</span>, <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="ident">String::from</span>(<span class="string">&quot;asdf&quot;</span>)));
         }
         <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">Keypair::from_secret_slice</span>(<span class="kw-2">&amp;</span><span class="ident">decrypted_buffer</span>).<span class="ident">unwrap</span>();
         <span class="ident">KeypairStore</span> {

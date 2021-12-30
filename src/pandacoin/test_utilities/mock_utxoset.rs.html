@@ -57,15 +57,12 @@
 <span id="57">57</span>
 <span id="58">58</span>
 <span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block::RawBlock</span>,
     <span class="ident">blockchain::ForkChains</span>,
-    <span class="ident">panda_protos</span>::{<span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>, <span class="ident">RawBlockProto</span>, <span class="ident">TransactionProto</span>},
+    <span class="ident">panda_protos</span>::{<span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>, <span class="ident">TransactionProto</span>},
     <span class="ident">utxoset::AbstractUtxoSet</span>,
 };
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
@@ -116,9 +113,6 @@
         <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">mock_outputs</span>.<span class="ident">get</span>(<span class="ident">output_id</span>).<span class="ident">unwrap</span>().<span class="ident">clone</span>())
     }
     <span class="kw">fn</span> <span class="ident">transaction_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_tx</span>: <span class="kw-2">&amp;</span><span class="ident">TransactionProto</span>) -&gt; <span class="ident">u64</span> {
-        <span class="number">0</span>
-    }
-    <span class="kw">fn</span> <span class="ident">block_fees</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_block</span>: <span class="kw-2">&amp;</span><span class="ident">RawBlockProto</span>) -&gt; <span class="ident">u64</span> {
         <span class="number">0</span>
     }
 }

@@ -179,8 +179,33 @@
 <span id="179">179</span>
 <span id="180">180</span>
 <span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block::RawBlock</span>,
+    <span class="ident">merkle_tree_manager::MerkleTree</span>,
     <span class="ident">miniblock::MiniBlock</span>,
     <span class="ident">panda_protos</span>::{<span class="ident">MiniBlockProto</span>, <span class="ident">TransactionProto</span>},
     <span class="ident">transaction::Transaction</span>,
@@ -196,6 +221,7 @@
     <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>,
     <span class="ident">timestamp</span>: <span class="ident">u64</span>,
     <span class="ident">mini_blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span>,
+    <span class="ident">merkle_tree</span>: <span class="ident">MerkleTree</span>,
 }
 <span class="kw">impl</span> <span class="ident">MockRawBlockForBlockFee</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
@@ -212,6 +238,7 @@
             <span class="ident">mock_parent_hash</span>,
             <span class="ident">timestamp</span>,
             <span class="ident">mini_blocks</span>: <span class="macro">vec!</span>[],
+            <span class="ident">merkle_tree</span>: <span class="ident">MerkleTree::new</span>(<span class="macro">vec!</span>[].<span class="ident">iter</span>()),
         }
     }
 }
@@ -234,6 +261,9 @@
     <span class="kw">fn</span> <span class="ident">get_mini_blocks</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mini_blocks</span>
     }
+    <span class="kw">fn</span> <span class="ident">get_merkle_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">MerkleTree</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">merkle_tree</span>
+    }
 }
 
 <span class="doccomment">/// This Mock RawBlock is used for testing the UTXO Set</span>
@@ -242,6 +272,7 @@
     <span class="ident">mock_block_id</span>: <span class="ident">u32</span>,
     <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
     <span class="ident">mini_blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span>,
+    <span class="ident">merkle_tree</span>: <span class="ident">MerkleTree</span>,
 }
 <span class="kw">impl</span> <span class="ident">MockRawBlockForUTXOSet</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
@@ -249,13 +280,13 @@
         <span class="ident">mock_block_hash</span>: <span class="ident">Sha256Hash</span>,
         <span class="ident">transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">merkle_tree</span> <span class="op">=</span> <span class="ident">MerkleTree::new</span>(<span class="ident">transactions</span>.<span class="ident">iter</span>());
         <span class="kw">let</span> <span class="ident">mini_block_transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionProto</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">transactions</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> <span class="ident">tx</span>.<span class="ident">into_proto</span>()).<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="ident">mini_block_proto</span> <span class="op">=</span> <span class="ident">MiniBlockProto</span> {
             <span class="ident">receiver</span>: <span class="macro">vec!</span>[],
             <span class="ident">creator</span>: <span class="macro">vec!</span>[],
             <span class="ident">signature</span>: <span class="macro">vec!</span>[],
-            <span class="ident">merkle_root</span>: <span class="macro">vec!</span>[],
             <span class="ident">transactions</span>: <span class="ident">mini_block_transactions</span>,
         };
         <span class="kw">let</span> <span class="ident">mini_block</span> <span class="op">=</span> <span class="ident">MiniBlock::from_proto</span>(<span class="ident">mini_block_proto</span>);
@@ -263,6 +294,7 @@
             <span class="ident">mock_block_id</span>,
             <span class="ident">mock_block_hash</span>,
             <span class="ident">mini_blocks</span>: <span class="macro">vec!</span>[<span class="ident">mini_block</span>],
+            <span class="ident">merkle_tree</span>,
         }
     }
 }
@@ -276,6 +308,9 @@
     <span class="kw">fn</span> <span class="ident">get_mini_blocks</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mini_blocks</span>
     }
+    <span class="kw">fn</span> <span class="ident">get_merkle_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">MerkleTree</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">merkle_tree</span>
+    }
 }
 
 <span class="doccomment">/// This Mock RawBlock is used for testing the blockchain Set</span>
@@ -287,6 +322,8 @@
     <span class="ident">mock_parent_hash</span>: <span class="ident">Sha256Hash</span>,
     <span class="ident">timestamp</span>: <span class="ident">u64</span>,
     <span class="ident">mini_blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span>,
+    <span class="ident">merkle_tree</span>: <span class="ident">MerkleTree</span>,
+    <span class="ident">merkle_root</span>: <span class="ident">Sha256Hash</span>,
 }
 <span class="kw">impl</span> <span class="ident">MockRawBlockForBlockchain</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
@@ -297,13 +334,14 @@
         <span class="ident">timestamp</span>: <span class="ident">u64</span>,
         <span class="ident">transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">merkle_tree</span> <span class="op">=</span> <span class="ident">MerkleTree::new</span>(<span class="ident">transactions</span>.<span class="ident">iter</span>());
+        <span class="kw">let</span> <span class="ident">merkle_root</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">merkle_tree</span>.<span class="ident">get_root</span>()).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">mini_block_transactions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionProto</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">transactions</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> <span class="ident">tx</span>.<span class="ident">into_proto</span>()).<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="ident">mini_block_proto</span> <span class="op">=</span> <span class="ident">MiniBlockProto</span> {
             <span class="ident">receiver</span>: <span class="macro">vec!</span>[],
             <span class="ident">creator</span>: <span class="macro">vec!</span>[],
             <span class="ident">signature</span>: <span class="macro">vec!</span>[],
-            <span class="ident">merkle_root</span>: <span class="macro">vec!</span>[],
             <span class="ident">transactions</span>: <span class="ident">mini_block_transactions</span>,
         };
         <span class="kw">let</span> <span class="ident">mini_block</span> <span class="op">=</span> <span class="ident">MiniBlock::from_proto</span>(<span class="ident">mini_block_proto</span>);
@@ -315,6 +353,8 @@
             <span class="ident">mock_parent_hash</span>,
             <span class="ident">timestamp</span>,
             <span class="ident">mini_blocks</span>: <span class="macro">vec!</span>[<span class="ident">mini_block</span>],
+            <span class="ident">merkle_tree</span>,
+            <span class="ident">merkle_root</span>,
         }
     }
 }
@@ -337,27 +377,35 @@
     <span class="kw">fn</span> <span class="ident">get_mini_blocks</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mini_blocks</span>
     }
+    <span class="kw">fn</span> <span class="ident">get_merkle_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">MerkleTree</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">merkle_tree</span>
+    }
+    <span class="kw">fn</span> <span class="ident">get_merkle_root</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Sha256Hash</span> {
+        <span class="self">self</span>.<span class="ident">merkle_root</span>
+    }
 }
 
 <span class="doccomment">/// This Mock RawBlock is used for testing the blockchain Set</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MockRawBlockForForkManager</span> {
     <span class="ident">mini_blocks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span>,
+    <span class="ident">merkle_tree</span>: <span class="ident">MerkleTree</span>,
 }
 <span class="kw">impl</span> <span class="ident">MockRawBlockForForkManager</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
         <span class="ident">MockRawBlockForForkManager</span> {
             <span class="ident">mini_blocks</span>: <span class="macro">vec!</span>[],
+            <span class="ident">merkle_tree</span>: <span class="ident">MerkleTree::new</span>(<span class="macro">vec!</span>[].<span class="ident">iter</span>()),
         }
     }
 }
 
 <span class="kw">impl</span> <span class="ident">RawBlock</span> <span class="kw">for</span> <span class="ident">MockRawBlockForForkManager</span> {
-    <span class="comment">// fn get_transactions(&amp;self) -&gt; &amp;Vec&lt;Transaction&gt; {</span>
-    <span class="comment">//     &amp;self.transactions</span>
-    <span class="comment">// }</span>
     <span class="kw">fn</span> <span class="ident">get_mini_blocks</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MiniBlock</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mini_blocks</span>
+    }
+    <span class="kw">fn</span> <span class="ident">get_merkle_tree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">MerkleTree</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">merkle_tree</span>
     }
 }
 </code></pre></div>
