@@ -1,21 +1,41 @@
 use std::io::Cursor;
 
 use prost::Message;
-use secp256k1::{PublicKey, Signature};
+use secp256k1::{Error, PublicKey, Signature};
 
 use crate::{
-    crypto::hash_bytes,
+    crypto::{hash_bytes, sign_message},
+    keypair::Keypair,
+    merkle_tree_manager::MerkleTree,
     panda_protos::{MiniBlockProto, TransactionProto},
     transaction::Transaction,
     types::Sha256Hash,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct MiniBlock {
     hash: Sha256Hash,
     fee: u64,
     transactions: Vec<Transaction>,
     mini_block_proto: MiniBlockProto,
+}
+
+impl MiniBlockProto {
+    pub fn new(tx_set: Vec<Transaction>, to: &PublicKey, my_keypair: &Keypair) -> Self {
+        let merkle_tree = MerkleTree::new_from_hashes(tx_set.iter().map(|tx| tx.get_hash()));
+        let message = [
+            merkle_tree.get_root().unwrap().to_vec(),
+            to.serialize().to_vec(),
+        ]
+        .concat();
+
+        MiniBlockProto {
+            receiver: to.serialize().to_vec(),
+            signature: sign_message(&message, my_keypair.get_secret_key()).to_vec(),
+            creator: my_keypair.get_public_key().serialize().to_vec(),
+            transactions: tx_set.into_iter().map(|tx| tx.into_proto()).collect(),
+        }
+    }
 }
 
 impl MiniBlock {
@@ -83,13 +103,15 @@ impl MiniBlock {
         &self.mini_block_proto
     }
     pub fn get_receiver(&self) -> PublicKey {
+        // TODO remove unwrap and return a result
         PublicKey::from_slice(&self.mini_block_proto.receiver[..]).unwrap()
     }
     pub fn get_creator(&self) -> PublicKey {
+        // TODO remove unwrap and return a result
         PublicKey::from_slice(&self.mini_block_proto.creator[..]).unwrap()
     }
-    pub fn get_signature(&self) -> Signature {
-        Signature::from_compact(&self.mini_block_proto.signature[..]).unwrap()
+    pub fn get_signature(&self) -> Result<Signature, Error> {
+        Signature::from_compact(&self.mini_block_proto.signature[..])
     }
 }
 
@@ -126,6 +148,7 @@ mod test {
             txtype: TxType::Normal as i32,
             message: vec![],
             signature: vec![],
+            broker: vec![0; 32],
         };
         let mini_block_proto = MiniBlockProto {
             receiver: keypair_1.get_public_key().serialize().to_vec(),
@@ -153,7 +176,11 @@ mod test {
             mini_block_proto.creator
         );
         assert_eq!(
-            mini_block.get_signature().serialize_compact().to_vec(),
+            mini_block
+                .get_signature()
+                .unwrap()
+                .serialize_compact()
+                .to_vec(),
             mini_block_proto.signature
         );
         assert_eq!(
@@ -176,7 +203,11 @@ mod test {
             mini_block_proto.creator
         );
         assert_eq!(
-            mini_block_2.get_signature().serialize_compact().to_vec(),
+            mini_block_2
+                .get_signature()
+                .unwrap()
+                .serialize_compact()
+                .to_vec(),
             mini_block_proto.signature
         );
         assert_eq!(

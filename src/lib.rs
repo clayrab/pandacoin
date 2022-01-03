@@ -12,7 +12,7 @@ pub mod longest_chain_queue;
 pub mod mempool;
 pub mod merkle_tree_manager;
 pub mod miniblock;
-pub mod miniblock_manager;
+pub mod miniblock_mempool;
 pub mod output;
 #[path = "proto/out/panda_protos.rs"]
 pub mod panda_protos;

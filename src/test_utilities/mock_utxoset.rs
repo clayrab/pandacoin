@@ -53,7 +53,7 @@ impl AbstractUtxoSet for MockUtxoSet {
     fn output_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto> {
         Some(self.mock_outputs.get(output_id).unwrap().clone())
     }
-    fn transaction_fees(&self, _tx: &TransactionProto) -> u64 {
+    fn get_fee_of_transaction(&self, _tx: &TransactionProto) -> u64 {
         0
     }
 }

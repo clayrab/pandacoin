@@ -23,6 +23,7 @@ message TransactionProto {
     TxType txtype = 4;
     bytes message = 5;
     bytes signature = 6;
+    bytes broker = 7;
 }
 
 message MiniBlockProto {

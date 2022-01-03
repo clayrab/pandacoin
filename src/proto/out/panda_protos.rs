@@ -5,14 +5,14 @@ pub struct OutputIdProto {
     #[prost(uint32, tag = "2")]
     pub output_ordinal: u32,
 }
-#[derive(Clone, Eq, PartialEq, ::prost::Message)]
+#[derive(Clone, Eq, Hash, PartialEq, ::prost::Message)]
 pub struct OutputProto {
     #[prost(bytes = "vec", tag = "1")]
     pub receiver: ::prost::alloc::vec::Vec<u8>,
     #[prost(uint64, tag = "2")]
     pub amount: u64,
 }
-#[derive(Clone, Eq, PartialEq, ::prost::Message)]
+#[derive(Clone, Eq, Hash, PartialEq, ::prost::Message)]
 pub struct TransactionProto {
     #[prost(uint64, tag = "1")]
     pub timestamp: u64,
@@ -26,6 +26,8 @@ pub struct TransactionProto {
     pub message: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes = "vec", tag = "6")]
     pub signature: ::prost::alloc::vec::Vec<u8>,
+    #[prost(bytes = "vec", tag = "7")]
+    pub broker: ::prost::alloc::vec::Vec<u8>,
 }
 /// Nested message and enum types in `TransactionProto`.
 pub mod transaction_proto {
@@ -37,7 +39,7 @@ pub mod transaction_proto {
         Service = 2,
     }
 }
-#[derive(Clone, Eq, PartialEq, ::prost::Message)]
+#[derive(Clone, Eq, Hash, PartialEq, ::prost::Message)]
 pub struct MiniBlockProto {
     #[prost(bytes = "vec", tag = "1")]
     pub receiver: ::prost::alloc::vec::Vec<u8>,
@@ -48,7 +50,7 @@ pub struct MiniBlockProto {
     #[prost(message, repeated, tag = "4")]
     pub transactions: ::prost::alloc::vec::Vec<TransactionProto>,
 }
-#[derive(Clone, Eq, PartialEq, ::prost::Message)]
+#[derive(Clone, Eq, Hash, PartialEq, ::prost::Message)]
 pub struct RawBlockProto {
     #[prost(uint32, tag = "1")]
     pub id: u32,

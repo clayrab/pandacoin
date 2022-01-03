@@ -8,7 +8,7 @@ use pandacoin::fork_manager::ForkManager;
 use pandacoin::keypair_store::KeypairStore;
 use pandacoin::longest_chain_queue::LongestChainQueue;
 use pandacoin::mempool::{AbstractMempool, Mempool};
-use pandacoin::miniblock_manager::MiniblockManager;
+use pandacoin::miniblock_mempool::MiniblockMempool;
 use pandacoin::shutdown_signals::signal_for_shutdown;
 use pandacoin::timestamp_generator::{AbstractTimestampGenerator, SystemTimestampGenerator};
 use std::env;
@@ -28,7 +28,7 @@ pub async fn main() -> pandacoin::Result<()> {
     let (shutdown_channel_sender, shutdown_channel_receiver) = broadcast::channel(1);
     let (shutdown_waiting_sender, mut shutdown_waiting_receiver) = mpsc::channel::<()>(1);
     let constants = Arc::new(Constants::new());
-    let timestamp_generator: Arc<Box<dyn AbstractTimestampGenerator>> =
+    let timestamp_generator: Arc<Box<dyn AbstractTimestampGenerator + Send + Sync>> =
         Arc::new(Box::new(SystemTimestampGenerator::new()));
     let command_line_opts = Arc::new(CommandLineOpts::parse());
     let keypair_store = Arc::new(KeypairStore::new(command_line_opts.clone()));
@@ -65,11 +65,21 @@ pub async fn main() -> pandacoin::Result<()> {
         Arc::new(RwLock::new(Box::new(
             Mempool::new(
                 utxoset_ref.clone(),
+                keypair_store.clone(),
                 shutdown_channel_receiver,
                 shutdown_waiting_sender.clone(),
             )
             .await,
         )));
+
+    let miniblock_mempool_mutex_ref = Arc::new(RwLock::new(Box::new(MiniblockMempool::new(
+        constants.clone(),
+        timestamp_generator.clone(),
+        keypair_store.clone(),
+        utxoset_ref.clone(),
+        mempool_ref.clone(),
+    ))));
+
     let _blockchain_mutex_ref = Arc::new(RwLock::new(Box::new(
         Blockchain::new(
             fork_manager,
@@ -79,15 +89,10 @@ pub async fn main() -> pandacoin::Result<()> {
             constants.clone(),
             utxoset_ref.clone(),
             mempool_ref.clone(),
+            miniblock_mempool_mutex_ref.clone(),
         )
         .await,
     )));
-    let _miniblock_manager_mutex_ref = Arc::new(RwLock::new(Box::new(MiniblockManager::new(
-        utxoset_ref.clone(),
-        mempool_ref.clone(),
-        timestamp_generator.clone(),
-        keypair_store.clone(),
-    ))));
 
     println!("WELCOME TO PANDACOIN!");
     if env::var("RUST_LOG").is_err() {
