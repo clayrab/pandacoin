@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;mempool.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mempool.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../pandacoin/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;mempool.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>mempool.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../pandacoin/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -312,13 +313,161 @@
 <span id="312">312</span>
 <span id="313">313</span>
 <span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::block::RawBlock</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos::OutputIdProto</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::keypair_store::KeypairStore</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos</span>::{<span class="ident">MiniBlockProto</span>, <span class="ident">OutputIdProto</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transaction::Transaction</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::types::Sha256Hash</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utxoset::AbstractUtxoSet</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::Error</span>;
 <span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
+<span class="kw">use</span> <span class="ident">secp256k1::PublicKey</span>;
 <span class="kw">use</span> <span class="ident">std::collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
@@ -329,29 +478,35 @@
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">AbstractMempool</span>: <span class="ident">Debug</span> {
     <span class="kw">fn</span> <span class="ident">get_latest_block_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u32</span>;
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_transaction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">transaction</span>: <span class="ident">Transaction</span>) -&gt; <span class="ident">bool</span>;
-    <span class="kw">fn</span> <span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
-    <span class="kw">fn</span> <span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
-    <span class="kw">fn</span> <span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
-    <span class="kw">fn</span> <span class="ident">get_current_set</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span>;
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_transaction</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">transaction</span>: <span class="ident">Transaction</span>) -&gt; <span class="ident">bool</span>;
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">roll_forward</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
+    <span class="kw">fn</span> <span class="ident">roll_back</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
+    <span class="kw">fn</span> <span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>);
+    <span class="kw">fn</span> <span class="ident">get_broker_set</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_known_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span>, <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Transaction</span><span class="op">&gt;</span>;
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">MempoolContext</span> {
     <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">keypair_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">KeypairStore</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Mempool</span> {
-    <span class="comment">// track the latest block in mempool itself so we don&#39;t have to get it from some Arc&lt;Mutex&gt; elsewhere</span>
+    <span class="doccomment">/// track the latest block in mempool itself so we don&#39;t have to get it from some Arc&lt;Mutex&gt; elsewhere</span>
     <span class="ident">block_count</span>: <span class="ident">u32</span>,
-    <span class="comment">// The current set of transactions that we are the broker for</span>
-    <span class="ident">current_set</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span>,
-    <span class="comment">// tx-hash -&gt; tx</span>
+    <span class="doccomment">/// The current set of transactions that we are the broker for. This will not include transaction which</span>
+    <span class="doccomment">/// were in conflict with a &quot;first seen&quot;.  This set is managed by analyzine transaction&#39;s inputs in the</span>
+    <span class="doccomment">/// known_inputs and maintaining a non-conflicting a set of transactions.</span>
+    <span class="ident">broker_set</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// tx-hash -&gt; tx</span>
     <span class="ident">transactions</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span>, <span class="ident">Transaction</span><span class="op">&gt;</span>,
-    <span class="comment">// maps inputs to transactions</span>
+    <span class="doccomment">/// maps inputs to transactions. For now we just choose arbitrarily from the sent of transactions</span>
+    <span class="doccomment">/// when we want to create a mini block, but in the future we could optimize this</span>
     <span class="ident">known_inputs</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span>, <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="comment">// Mempool Context</span>
+    <span class="doccomment">/// Mempool Context</span>
     <span class="ident">context</span>: <span class="ident">MempoolContext</span>,
 }
 
@@ -365,6 +520,7 @@
     <span class="comment">// Mempool Constructor</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">keypair_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">KeypairStore</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">shutdown_channel_receiver</span>: <span class="ident">broadcast::Receiver</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
         <span class="ident">shutdown_waiting_sender</span>: <span class="ident">mpsc::Sender</span><span class="op">&lt;</span>()<span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
@@ -383,12 +539,43 @@
         });
 
         <span class="ident">Mempool</span> {
-            <span class="ident">context</span>: <span class="ident">MempoolContext</span> { <span class="ident">utxoset_ref</span> },
+            <span class="ident">context</span>: <span class="ident">MempoolContext</span> {
+                <span class="ident">utxoset_ref</span>,
+                <span class="ident">keypair_store</span>,
+            },
             <span class="ident">block_count</span>: <span class="number">0</span>,
-            <span class="ident">current_set</span>: <span class="ident">HashSet::new</span>(),
+            <span class="ident">broker_set</span>: <span class="ident">HashSet::new</span>(),
             <span class="ident">transactions</span>: <span class="ident">HashMap::new</span>(),
             <span class="ident">known_inputs</span>: <span class="ident">HashMap::new</span>(),
         }
+    }
+    <span class="doccomment">/// Make a miniblock containing tx from our mempool, but excluding the tx that the</span>
+    <span class="doccomment">/// other node is already aware of.</span>
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new_miniblock_from_difference</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">their_set</span>: <span class="kw-2">&amp;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span><span class="op">&gt;</span>,
+        <span class="ident">their_pubkey</span>: <span class="ident">PublicKey</span>,
+    ) -&gt; <span class="ident">MiniBlockProto</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tx_set</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">get_broker_set</span>()
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">hash</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">get_transaction</span>(<span class="ident">hash</span>).<span class="ident">unwrap</span>().<span class="ident">clone</span>())
+            .<span class="ident">collect</span>();
+
+        <span class="ident">tx_set</span>.<span class="ident">retain</span>(<span class="op">|</span><span class="ident">tx</span><span class="op">|</span> {
+            <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">tx</span>.<span class="ident">get_inputs</span>() {
+                <span class="kw">if</span> <span class="ident">their_set</span>.<span class="ident">contains</span>(<span class="ident">input</span>) {
+                    <span class="kw">return</span> <span class="bool-val">false</span>;
+                }
+            }
+            <span class="bool-val">true</span>
+        });
+
+        <span class="ident">MiniBlockProto::new</span>(
+            <span class="ident">tx_set</span>,
+            <span class="kw-2">&amp;</span><span class="ident">their_pubkey</span>,
+            <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">keypair_store</span>.<span class="ident">get_keypair</span>(),
+        )
     }
 }
 
@@ -403,12 +590,20 @@
             <span class="number">0</span>
         }
     }
+    <span class="doccomment">/// get a transaction from the mempool</span>
+    <span class="kw">fn</span> <span class="ident">get_transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Transaction</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">transactions</span>.<span class="ident">get</span>(<span class="ident">hash</span>)
+    }
     <span class="doccomment">/// get the current sent of transactions that could be made into a valid block</span>
-    <span class="kw">fn</span> <span class="ident">get_current_set</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">current_set</span>
+    <span class="kw">fn</span> <span class="ident">get_broker_set</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">broker_set</span>
     }
     <span class="doccomment">///</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_transaction</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">transaction</span>: <span class="ident">Transaction</span>) -&gt; <span class="ident">bool</span> {
+    <span class="kw">fn</span> <span class="ident">get_known_inputs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">OutputIdProto</span>, <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">known_inputs</span>
+    }
+    <span class="doccomment">/// add a transaction to the mempool. This doesn&#39;t necessarily need to</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_transaction</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">transaction</span>: <span class="ident">Transaction</span>) -&gt; <span class="ident">bool</span> {
         <span class="kw">let</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">read</span>().<span class="kw">await</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">is_spendable</span> <span class="op">=</span> <span class="bool-val">true</span>;
         <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">transaction</span>.<span class="ident">get_inputs</span>() {
@@ -434,7 +629,7 @@
                     .<span class="ident">or_insert</span>(<span class="ident">HashSet::from</span>([<span class="kw-2">*</span><span class="ident">transaction</span>.<span class="ident">get_hash</span>()]));
             }
             <span class="kw">if</span> <span class="op">!</span><span class="ident">is_already_known</span> {
-                <span class="self">self</span>.<span class="ident">current_set</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">transaction</span>.<span class="ident">get_hash</span>());
+                <span class="self">self</span>.<span class="ident">broker_set</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">transaction</span>.<span class="ident">get_hash</span>());
             } <span class="kw">else</span> {
                 <span class="comment">// TODO there is a UX issue here. It might make more sense to allow a replace-by-fee style logic here, but first-seen</span>
                 <span class="comment">// is I think a better UX and also much easier to implement.</span>
@@ -448,27 +643,33 @@
         <span class="ident">is_spendable</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">roll_forward</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
         <span class="self">self</span>.<span class="ident">block_count</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         <span class="comment">// For each transaction in the block, remove all transactions from the mempool which was spending any of</span>
         <span class="comment">// their inputs(which should include the transaction itself)</span>
         <span class="kw">for</span> <span class="ident">transaction</span> <span class="kw">in</span> <span class="ident">block</span>.<span class="ident">transactions_iter</span>() {
+            <span class="comment">// if the transction is in the broker_set, it should be removed...</span>
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">transactions</span>.<span class="ident">get</span>(<span class="ident">transaction</span>.<span class="ident">get_hash</span>()) {
+                <span class="self">self</span>.<span class="ident">broker_set</span>.<span class="ident">remove</span>(<span class="ident">transaction</span>.<span class="ident">get_hash</span>());
+            }
             <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">transaction</span>.<span class="ident">get_inputs</span>() {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tx_set</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">known_inputs</span>.<span class="ident">get</span>(<span class="ident">input</span>) {
-                    <span class="kw">for</span> <span class="ident">tx_hash</span> <span class="kw">in</span> <span class="ident">tx_set</span> {
-                        <span class="self">self</span>.<span class="ident">current_set</span>.<span class="ident">remove</span>(<span class="ident">tx_hash</span>);
-                    }
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">tx_hash_set</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">known_inputs</span>.<span class="ident">get_mut</span>(<span class="ident">input</span>) {
+                    <span class="ident">tx_hash_set</span>.<span class="ident">remove</span>(<span class="ident">transaction</span>.<span class="ident">get_hash</span>());
+                    <span class="comment">// if the set still contains a transction, this transaction can perhaps be added into</span>
+                    <span class="comment">// the broker_set... However, it must not conflict with any other transaction in the</span>
+                    <span class="comment">// broker set.</span>
+                    <span class="self">self</span>.<span class="ident">add_transaction</span>(<span class="ident">transaction</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
                 }
             }
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
+    <span class="kw">fn</span> <span class="ident">roll_back</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
         <span class="self">self</span>.<span class="ident">block_count</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
         <span class="kw">for</span> <span class="ident">transaction</span> <span class="kw">in</span> <span class="ident">block</span>.<span class="ident">transactions_iter</span>() {
             <span class="comment">// if we had this transaction in mempool earlier, we can reuse it</span>
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">transactions</span>.<span class="ident">get</span>(<span class="ident">transaction</span>.<span class="ident">get_hash</span>()) {
-                <span class="self">self</span>.<span class="ident">current_set</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">transaction</span>.<span class="ident">get_hash</span>());
+                <span class="self">self</span>.<span class="ident">broker_set</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">transaction</span>.<span class="ident">get_hash</span>());
             }
             <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">transaction</span>.<span class="ident">get_inputs</span>() {
                 <span class="self">self</span>.<span class="ident">known_inputs</span>
@@ -480,7 +681,7 @@
             }
         }
     }
-    <span class="kw">fn</span> <span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
+    <span class="kw">fn</span> <span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) {
         <span class="kw">for</span> <span class="ident">transaction</span> <span class="kw">in</span> <span class="ident">block</span>.<span class="ident">transactions_iter</span>() {
             <span class="kw">for</span> <span class="ident">input</span> <span class="kw">in</span> <span class="ident">transaction</span>.<span class="ident">get_inputs</span>() {
                 <span class="self">self</span>.<span class="ident">known_inputs</span>.<span class="ident">remove</span>(<span class="ident">input</span>);
@@ -495,7 +696,10 @@
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">AbstractMempool</span>, <span class="ident">Mempool</span>};
     <span class="kw">use</span> <span class="kw">crate</span>::{
         <span class="ident">block::RawBlock</span>,
+        <span class="ident">command_line_opts::CommandLineOpts</span>,
         <span class="ident">keypair::Keypair</span>,
+        <span class="ident">keypair_store::KeypairStore</span>,
+        <span class="ident">miniblock::MiniBlock</span>,
         <span class="ident">panda_protos</span>::{<span class="ident">transaction_proto::TxType</span>, <span class="ident">OutputIdProto</span>, <span class="ident">OutputProto</span>},
         <span class="ident">test_utilities</span>::{
             <span class="ident">globals_init::make_timestamp_generator_for_test</span>, <span class="ident">mock_block::MockRawBlockForUTXOSet</span>,
@@ -504,12 +708,100 @@
         <span class="ident">transaction::Transaction</span>,
         <span class="ident">utxoset::AbstractUtxoSet</span>,
     };
-    <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
+    <span class="kw">use</span> <span class="ident">clap::Clap</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections::HashSet</span>, <span class="ident">sync::Arc</span>};
     <span class="kw">use</span> <span class="ident">tokio::sync</span>::{<span class="ident">broadcast</span>, <span class="ident">mpsc</span>, <span class="ident">RwLock</span>};
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new_miniblock_from_difference_test</span>() {
+        <span class="kw">let</span> <span class="ident">timestamp_generator</span> <span class="op">=</span> <span class="ident">make_timestamp_generator_for_test</span>();
+
+        <span class="kw">let</span> <span class="ident">command_line_opts</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">CommandLineOpts::parse_from</span>(<span class="kw-2">&amp;</span>[
+            <span class="string">&quot;pandacoin&quot;</span>,
+            <span class="string">&quot;--password&quot;</span>,
+            <span class="string">&quot;asdf&quot;</span>,
+        ]));
+        <span class="kw">let</span> <span class="ident">keypair_store</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>));
+
+        <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">Keypair::new</span>();
+        <span class="kw">let</span> <span class="ident">input_a</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">1</span>; <span class="number">32</span>], <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">input_b</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">2</span>; <span class="number">32</span>], <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">input_b_2</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">3</span>; <span class="number">32</span>], <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">input_c</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">4</span>; <span class="number">32</span>], <span class="number">0</span>);
+        <span class="kw">let</span> <span class="ident">output_a</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">output_b</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">2</span>);
+        <span class="kw">let</span> <span class="ident">output_c</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">3</span>);
+
+        <span class="kw">let</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="ident">MockUtxoSet::new</span>();
+        <span class="kw">let</span> <span class="ident">mock_utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
+            <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">utxoset</span>)));
+
+        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">shutdown_channel_receiver</span>) <span class="op">=</span> <span class="ident">broadcast::channel</span>(<span class="number">1</span>);
+        <span class="kw">let</span> (<span class="ident">shutdown_waiting_sender</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(<span class="number">1</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="ident">Mempool::new</span>(
+            <span class="ident">mock_utxoset_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">keypair_store</span>.<span class="ident">clone</span>(),
+            <span class="ident">shutdown_channel_receiver</span>,
+            <span class="ident">shutdown_waiting_sender</span>.<span class="ident">clone</span>(),
+        )
+        .<span class="kw">await</span>;
+
+        <span class="kw">let</span> <span class="ident">tx_a</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
+            <span class="macro">vec!</span>[<span class="ident">input_a</span>.<span class="ident">clone</span>()],
+            <span class="macro">vec!</span>[<span class="ident">output_a</span>.<span class="ident">clone</span>()],
+            <span class="ident">TxType::Normal</span>,
+            <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
+        );
+        <span class="kw">let</span> <span class="ident">tx_a_hash</span> <span class="op">=</span> <span class="ident">tx_a</span>.<span class="ident">get_hash</span>();
+        <span class="kw">let</span> <span class="ident">tx_b</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
+            <span class="macro">vec!</span>[<span class="ident">input_b</span>.<span class="ident">clone</span>(), <span class="ident">input_b_2</span>.<span class="ident">clone</span>()],
+            <span class="macro">vec!</span>[<span class="ident">output_b</span>],
+            <span class="ident">TxType::Normal</span>,
+            <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
+        );
+
+        <span class="kw">let</span> <span class="ident">tx_c</span> <span class="op">=</span> <span class="ident">Transaction::new</span>(
+            <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
+            <span class="macro">vec!</span>[<span class="ident">input_c</span>.<span class="ident">clone</span>()],
+            <span class="macro">vec!</span>[<span class="ident">output_c</span>],
+            <span class="ident">TxType::Normal</span>,
+            <span class="macro">vec!</span>[],
+            <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
+        );
+        <span class="kw">let</span> <span class="ident">tx_c_hash</span> <span class="op">=</span> <span class="ident">tx_c</span>.<span class="ident">get_hash</span>();
+        <span class="kw">let</span> <span class="ident">added_a</span> <span class="op">=</span> <span class="ident">mempool</span>.<span class="ident">add_transaction</span>(<span class="ident">tx_a</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">added_b</span> <span class="op">=</span> <span class="ident">mempool</span>.<span class="ident">add_transaction</span>(<span class="ident">tx_b</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">added_c</span> <span class="op">=</span> <span class="ident">mempool</span>.<span class="ident">add_transaction</span>(<span class="ident">tx_c</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
+        <span class="macro">assert!</span>(<span class="ident">added_a</span>);
+        <span class="macro">assert!</span>(<span class="ident">added_b</span>);
+        <span class="macro">assert!</span>(<span class="ident">added_c</span>);
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">our_inputs</span> <span class="op">=</span> <span class="ident">HashSet::new</span>();
+        <span class="ident">our_inputs</span>.<span class="ident">insert</span>(<span class="ident">input_b_2</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">mini_block_proto</span> <span class="op">=</span> <span class="ident">mempool</span>
+            .<span class="ident">new_miniblock_from_difference</span>(<span class="kw-2">&amp;</span><span class="ident">our_inputs</span>, <span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>())
+            .<span class="kw">await</span>;
+        <span class="kw">let</span> <span class="ident">mini_block</span> <span class="op">=</span> <span class="ident">MiniBlock::from_serialiazed_proto</span>(<span class="ident">mini_block_proto</span>.<span class="ident">serialize</span>().<span class="ident">clone</span>());
+
+        <span class="kw">for</span> <span class="ident">tx</span> <span class="kw">in</span> <span class="ident">mini_block</span>.<span class="ident">get_transactions</span>() {
+            <span class="macro">assert!</span>(<span class="ident">tx</span>.<span class="ident">get_hash</span>() <span class="op">==</span> <span class="ident">tx_a_hash</span> <span class="op">|</span><span class="op">|</span> <span class="ident">tx</span>.<span class="ident">get_hash</span>() <span class="op">==</span> <span class="ident">tx_c_hash</span>);
+        }
+    }
+    <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mempool_test</span>() {
         <span class="kw">let</span> <span class="ident">timestamp_generator</span> <span class="op">=</span> <span class="ident">make_timestamp_generator_for_test</span>();
+
+        <span class="kw">let</span> <span class="ident">command_line_opts</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">CommandLineOpts::parse_from</span>(<span class="kw-2">&amp;</span>[
+            <span class="string">&quot;pandacoin&quot;</span>,
+            <span class="string">&quot;--password&quot;</span>,
+            <span class="string">&quot;asdf&quot;</span>,
+        ]));
+        <span class="kw">let</span> <span class="ident">keypair_store</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>));
+
         <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">Keypair::new</span>();
         <span class="kw">let</span> <span class="ident">input_a</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>([<span class="number">1</span>; <span class="number">32</span>], <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">output_a_1</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
@@ -569,6 +861,7 @@
         <span class="kw">let</span> (<span class="ident">shutdown_waiting_sender</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">mpsc::channel</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>(<span class="number">1</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="ident">Mempool::new</span>(
             <span class="ident">mock_utxoset_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">keypair_store</span>.<span class="ident">clone</span>(),
             <span class="ident">shutdown_channel_receiver</span>,
             <span class="ident">shutdown_waiting_sender</span>.<span class="ident">clone</span>(),
         )
@@ -579,54 +872,53 @@
         <span class="macro">assert!</span>(<span class="ident">added_a_1</span>);
         <span class="macro">assert!</span>(<span class="ident">added_a_2</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">len</span>(), <span class="number">1</span>);
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_some</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">len</span>(), <span class="number">1</span>);
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_some</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_latest_block_id</span>(), <span class="number">0</span>);
 
-        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a_1</span>);
+        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a_1</span>).<span class="kw">await</span>;
 
-        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">len</span>(), <span class="number">0</span>);
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">len</span>(), <span class="number">0</span>);
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_latest_block_id</span>(), <span class="number">0</span>);
 
         <span class="ident">mempool</span>.<span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a_1</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">len</span>(), <span class="number">1</span>);
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_some</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">len</span>(), <span class="number">1</span>);
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_some</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_latest_block_id</span>(), <span class="number">0</span>);
 
-        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a_1</span>);
+        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a_1</span>).<span class="kw">await</span>;
 
-        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">len</span>(), <span class="number">0</span>);
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">len</span>(), <span class="number">0</span>);
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_latest_block_id</span>(), <span class="number">0</span>);
 
-        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a_2</span>);
+        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_a_2</span>).<span class="kw">await</span>;
         <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_latest_block_id</span>(), <span class="number">1</span>);
 
         <span class="kw">let</span> <span class="ident">added_b</span> <span class="op">=</span> <span class="ident">mempool</span>.<span class="ident">add_transaction</span>(<span class="ident">tx_b</span>.<span class="ident">clone</span>()).<span class="kw">await</span>;
         <span class="macro">assert!</span>(<span class="ident">added_b</span>);
 
-        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">len</span>(), <span class="number">1</span>);
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_b_hash</span>).<span class="ident">is_some</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">len</span>(), <span class="number">1</span>);
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_b_hash</span>).<span class="ident">is_some</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_latest_block_id</span>(), <span class="number">1</span>);
 
-        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_b</span>);
+        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_b</span>).<span class="kw">await</span>;
 
-        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">len</span>(), <span class="number">0</span>);
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
-        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_current_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_b_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">len</span>(), <span class="number">0</span>);
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_1_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_a_2_hash</span>).<span class="ident">is_none</span>());
+        <span class="macro">assert!</span>(<span class="ident">mempool</span>.<span class="ident">get_broker_set</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">tx_b_hash</span>).<span class="ident">is_none</span>());
         <span class="macro">assert_eq!</span>(<span class="ident">mempool</span>.<span class="ident">get_latest_block_id</span>(), <span class="number">2</span>);
     }
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pandacoin" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
-    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
 </body></html>

@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;blockchain.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>blockchain.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../pandacoin/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src&#x2F;blockchain.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>blockchain.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script><script defer src="../../source-script.js"></script><script defer src="../../source-files.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../pandacoin/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -830,9 +831,6 @@
 <span id="830">830</span>
 <span id="831">831</span>
 <span id="832">832</span>
-<span id="833">833</span>
-<span id="834">834</span>
-<span id="835">835</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">async_trait::async_trait</span>;
 <span class="kw">use</span> <span class="ident">futures::StreamExt</span>;
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
@@ -841,11 +839,10 @@
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::blocks_database::BlocksDatabase</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::constants::Constants</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::crypto::verify_bytes_message</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::fork_manager::ForkManager</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::longest_chain_queue::LongestChainQueue</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::mempool::AbstractMempool</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::panda_protos::transaction_proto::TxType</span>;
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::miniblock_mempool::MiniblockMempool</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transaction::Transaction</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::types::Sha256Hash</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utxoset::AbstractUtxoSet</span>;
@@ -875,8 +872,8 @@
     <span class="kw">fn</span> <span class="ident">latest_block</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">fn</span> <span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span>;
     <span class="kw">fn</span> <span class="ident">get_block_by_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block_id</span>: <span class="ident">u32</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">AddBlockEvent</span>;
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_block</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">AddBlockEvent</span>;
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove_block</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ForkChains</span> {
@@ -894,6 +891,7 @@
     <span class="ident">constants</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Constants</span><span class="op">&gt;</span>,
     <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">miniblock_mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">MiniblockMempool</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -929,7 +927,7 @@
         <span class="self">self</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">block_hash</span>)
     }
     <span class="doccomment">/// remove blocks that are in fork branches and have become too old(beyond MAX_REORG)</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove_block</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block_hash</span>: <span class="kw-2">&amp;</span><span class="ident">Sha256Hash</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="comment">// TODO implement this</span>
         <span class="comment">// remove from fork tree</span>
         <span class="macro">info!</span>(<span class="string">&quot;remove block {:?}&quot;</span>, <span class="ident">block_hash</span>);
@@ -938,7 +936,7 @@
     <span class="doccomment">/// Append `Block` to the index of `Blockchain`</span>
     <span class="doccomment">/// These `AddBlockEvent`s will be turned into network responses so peers can figure out</span>
     <span class="doccomment">/// what&#39;s going on.</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_block</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">AddBlockEvent</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">add_block</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>) -&gt; <span class="ident">AddBlockEvent</span> {
         <span class="macro">println!</span>(
             <span class="string">&quot;***************** add block ***************** {:?}&quot;</span>,
             <span class="ident">block</span>.<span class="ident">get_hash</span>()
@@ -962,23 +960,29 @@
                     <span class="ident">AddBlockEvent::InvalidBlock</span>
                 } <span class="kw">else</span> {
                     <span class="self">self</span>.<span class="ident">fork_manager</span>
-                        .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">longest_chain_queue</span>)
+                        .<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>, <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">blocks_database</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">longest_chain_queue</span>)
                         .<span class="kw">await</span>;
                     <span class="kw">let</span> <span class="ident">latest_block_hash</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">latest_block_hash</span>();
                     <span class="kw">let</span> <span class="ident">is_new_lc_tip</span> <span class="op">=</span> <span class="ident">latest_block_hash</span> <span class="op">==</span> <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>.<span class="ident">get_previous_block_hash</span>());
                     <span class="kw">if</span> <span class="ident">is_first_block</span> <span class="op">|</span><span class="op">|</span> <span class="ident">is_new_lc_tip</span> {
                         <span class="comment">// First Block or we&#39;e new tip of the longest chain</span>
                         <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>());
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                        <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+                        {
+                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                            <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+                        }
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
+                        <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>).<span class="kw">await</span>;
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">miniblock_mempool</span> <span class="op">=</span>
+                            <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">miniblock_mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                        <span class="ident">miniblock_mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>).<span class="kw">await</span>;
+
                         <span class="self">self</span>.<span class="ident">roll_forward_max_reorg</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>).<span class="kw">await</span>;
                         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">insert</span>(<span class="ident">block</span>);
                         <span class="comment">// self.storage.roll_forward(&amp;block).await;</span>
                         <span class="ident">AddBlockEvent::AcceptedAsLongestChain</span>
                     } <span class="kw">else</span> {
-                        <span class="comment">// We are not on the longest chain</span>
+                        <span class="comment">// We are on the longest chain</span>
                         <span class="kw">if</span> <span class="ident">fork_chains</span>.<span class="ident">new_chain</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">len</span>() {
                             <span class="macro">assert_eq!</span>(
                                 <span class="ident">fork_chains</span>.<span class="ident">new_chain</span>.<span class="ident">len</span>(),
@@ -994,10 +998,16 @@
                                 <span class="kw">let</span> <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span>
                                     <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">block_hash</span>).<span class="ident">unwrap</span>();
                                 <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_back</span>();
-                                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                                <span class="ident">utxoset</span>.<span class="ident">roll_back</span>(<span class="ident">block</span>);
+                                {
+                                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                                    <span class="ident">utxoset</span>.<span class="ident">roll_back</span>(<span class="ident">block</span>);
+                                }
                                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
                                 <span class="ident">mempool</span>.<span class="ident">roll_back</span>(<span class="ident">block</span>);
+                                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">miniblock_mempool</span> <span class="op">=</span>
+                                    <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">miniblock_mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                                <span class="ident">miniblock_mempool</span>.<span class="ident">roll_back</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>).<span class="kw">await</span>;
+
                                 <span class="comment">// self.storage.roll_back(&amp;block);</span>
                             }
 
@@ -1006,10 +1016,15 @@
                                 <span class="kw">let</span> <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span>
                                     <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">get_block_by_hash</span>(<span class="ident">block_hash</span>).<span class="ident">unwrap</span>();
                                 <span class="self">self</span>.<span class="ident">longest_chain_queue</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>.<span class="ident">get_hash</span>());
-                                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                                <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>);
+                                {
+                                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                                    <span class="ident">utxoset</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>);
+                                }
                                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
-                                <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>);
+                                <span class="ident">mempool</span>.<span class="ident">roll_forward</span>(<span class="ident">block</span>).<span class="kw">await</span>;
+                                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">miniblock_mempool</span> <span class="op">=</span>
+                                    <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">miniblock_mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+                                <span class="ident">miniblock_mempool</span>.<span class="ident">roll_forward</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>).<span class="kw">await</span>;
                                 <span class="comment">// self.storage.roll_forward(block).await;</span>
                             }
                             <span class="comment">// Wind the old chain as a fork chain</span>
@@ -1023,7 +1038,7 @@
 
                             <span class="ident">AddBlockEvent::AcceptedAsNewLongestChain</span>
                         } <span class="kw">else</span> {
-                            <span class="comment">// we&#39;re just building on a new chain. Won&#39;t take over... yet!</span>
+                            <span class="comment">// we&#39;re just building on a fork...</span>
                             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
                             <span class="ident">utxoset</span>.<span class="ident">roll_forward_on_fork</span>(<span class="kw-2">&amp;</span><span class="ident">block</span>);
 
@@ -1047,6 +1062,7 @@
         <span class="ident">constants</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Constants</span><span class="op">&gt;</span>,
         <span class="ident">utxoset_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractUtxoSet</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">miniblock_mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="ident">MiniblockMempool</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="ident">Blockchain</span> {
             <span class="ident">longest_chain_queue</span>,
@@ -1057,6 +1073,7 @@
                 <span class="ident">constants</span>,
                 <span class="ident">utxoset_ref</span>,
                 <span class="ident">mempool_ref</span>,
+                <span class="ident">miniblock_mempool_ref</span>,
             },
         }
     }
@@ -1070,6 +1087,11 @@
                 )
                 .<span class="ident">unwrap</span>(),
             );
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">miniblock_mempool</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">miniblock_mempool_ref</span>.<span class="ident">write</span>().<span class="kw">await</span>;
+            <span class="ident">miniblock_mempool</span>
+                .<span class="ident">roll_forward_max_reorg</span>(<span class="ident">current_block</span>)
+                .<span class="kw">await</span>;
         }
     }
     <span class="doccomment">/// If the block is in the fork</span>
@@ -1077,14 +1099,14 @@
         <span class="self">self</span>.<span class="ident">blocks_database</span>.<span class="ident">contains_block_hash</span>(<span class="ident">block_hash</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">build_new_chain</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">this_block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>, <span class="ident">new_chain</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span>) {
+    <span class="kw">fn</span> <span class="ident">build_new_chain</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">this_block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>, <span class="ident">new_chain</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Sha256Hash</span><span class="op">&gt;</span>) {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>
             .<span class="ident">longest_chain_queue</span>
             .<span class="ident">contains_hash_by_block_id</span>(<span class="ident">this_block</span>.<span class="ident">get_hash</span>(), <span class="ident">this_block</span>.<span class="ident">get_id</span>())
         {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">prev_block</span>) <span class="op">=</span> <span class="self">self</span>
                 .<span class="ident">blocks_database</span>
-                .<span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">this_block</span>.<span class="ident">get_previous_block_hash</span>())
+                .<span class="ident">get_block_by_hash</span>(<span class="kw-2">&amp;mut</span> <span class="ident">this_block</span>.<span class="ident">get_previous_block_hash</span>())
             {
                 <span class="self">self</span>.<span class="ident">build_new_chain</span>(<span class="ident">prev_block</span>, <span class="ident">new_chain</span>);
             }
@@ -1095,7 +1117,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">old_chain</span> <span class="op">=</span> <span class="macro">vec!</span>[];
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_chain</span> <span class="op">=</span> <span class="macro">vec!</span>[];
 
-        <span class="self">self</span>.<span class="ident">build_new_chain</span>(<span class="ident">block</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">new_chain</span>);
+        <span class="self">self</span>.<span class="ident">build_new_chain</span>(<span class="ident">block</span>, <span class="kw-2">&amp;mut</span> <span class="ident">new_chain</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">first_block_in_new_chain</span> <span class="op">=</span> <span class="ident">block</span>;
         <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">new_chain</span>[<span class="number">0</span>] <span class="op">!</span><span class="op">=</span> <span class="ident">block</span>.<span class="ident">get_hash</span>() {
@@ -1181,83 +1203,17 @@
                 <span class="kw">return</span> <span class="bool-val">false</span>;
             }
             <span class="comment">// all the transactions must be valid</span>
+            <span class="kw">let</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">read</span>().<span class="kw">await</span>;
             <span class="ident">futures::stream::iter</span>(<span class="ident">block</span>.<span class="ident">transactions_iter</span>())
                 .<span class="ident">all</span>(<span class="op">|</span><span class="ident">transaction</span><span class="op">|</span> {
-                    <span class="self">self</span>.<span class="ident">validate_transaction</span>(<span class="ident">previous_block</span>, <span class="ident">transaction</span>, <span class="ident">fork_chains</span>)
+                    <span class="ident">Transaction::validate_transaction</span>(
+                        <span class="kw-2">&amp;</span><span class="ident">utxoset</span>,
+                        <span class="ident">previous_block</span>.<span class="ident">get_id</span>(),
+                        <span class="ident">transaction</span>,
+                        <span class="prelude-val">Some</span>(<span class="ident">fork_chains</span>),
+                    )
                 })
                 .<span class="kw">await</span>
-        }
-    }
-
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">validate_transaction</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">previous_block</span>: <span class="kw-2">&amp;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span>,
-        <span class="ident">tx</span>: <span class="kw-2">&amp;</span><span class="ident">Transaction</span>,
-        <span class="ident">fork_chains</span>: <span class="kw-2">&amp;</span><span class="ident">ForkChains</span>,
-    ) -&gt; <span class="ident">bool</span> {
-        <span class="comment">//println!(&quot;validate_transaction type{}&quot;);</span>
-        <span class="kw">match</span> <span class="ident">tx</span>.<span class="ident">get_txtype</span>() {
-            <span class="ident">TxType::Normal</span> =&gt; {
-                <span class="kw">if</span> <span class="ident">tx</span>.<span class="ident">get_inputs</span>().<span class="ident">is_empty</span>() <span class="op">&amp;&amp;</span> <span class="ident">tx</span>.<span class="ident">get_outputs</span>().<span class="ident">is_empty</span>() {
-                    <span class="kw">return</span> <span class="bool-val">true</span>;
-                }
-                <span class="kw">let</span> <span class="ident">utxoset</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">context</span>.<span class="ident">utxoset_ref</span>.<span class="ident">read</span>().<span class="kw">await</span>;
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">address</span>) <span class="op">=</span> <span class="ident">utxoset</span>.<span class="ident">get_receiver_for_inputs</span>(<span class="ident">tx</span>.<span class="ident">get_inputs</span>()) {
-                    <span class="macro">println!</span>(<span class="string">&quot;verify sig {:?}&quot;</span>, <span class="ident">address</span>);
-                    <span class="kw">if</span> <span class="op">!</span><span class="ident">verify_bytes_message</span>(<span class="ident">tx</span>.<span class="ident">get_hash</span>(), <span class="ident">tx</span>.<span class="ident">get_signature</span>(), <span class="kw-2">&amp;</span><span class="ident">address</span>) {
-                        <span class="macro">error!</span>(<span class="string">&quot;tx signature invalid&quot;</span>);
-                        <span class="kw">return</span> <span class="bool-val">false</span>;
-                    };
-                    <span class="comment">// validate our outputs</span>
-                    <span class="comment">// TODO: remove this clone?</span>
-                    <span class="kw">let</span> <span class="ident">inputs_iterator_stream</span> <span class="op">=</span> <span class="ident">futures::stream::iter</span>(<span class="ident">tx</span>.<span class="ident">get_inputs</span>());
-                    <span class="kw">let</span> <span class="ident">inputs_are_valid</span> <span class="op">=</span> <span class="ident">inputs_iterator_stream</span>
-                        .<span class="ident">all</span>(<span class="op">|</span><span class="ident">input</span><span class="op">|</span> {
-                            <span class="kw">if</span> <span class="ident">fork_chains</span>.<span class="ident">old_chain</span>.<span class="ident">is_empty</span>() {
-                                <span class="macro">info!</span>(<span class="string">&quot;is_output_spendable_at_block_id&quot;</span>);
-                                <span class="ident">utxoset</span>
-                                    .<span class="ident">is_output_spendable_at_block_id</span>(<span class="ident">input</span>, <span class="ident">previous_block</span>.<span class="ident">get_id</span>())
-                            } <span class="kw">else</span> {
-                                <span class="macro">info!</span>(<span class="string">&quot;is_output_spendable_in_fork_branch&quot;</span>);
-                                <span class="ident">utxoset</span>.<span class="ident">is_output_spendable_in_fork_branch</span>(<span class="ident">input</span>, <span class="ident">fork_chains</span>)
-                            }
-                        })
-                        .<span class="kw">await</span>;
-
-                    <span class="kw">if</span> <span class="op">!</span><span class="ident">inputs_are_valid</span> {
-                        <span class="macro">info!</span>(<span class="string">&quot;tx invalid inputs&quot;</span>);
-                        <span class="kw">return</span> <span class="bool-val">false</span>;
-                    }
-                    <span class="comment">// validate that inputs are unspent</span>
-                    <span class="kw">let</span> <span class="ident">input_amt</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">tx</span>
-                        .<span class="ident">get_inputs</span>()
-                        .<span class="ident">iter</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">input</span><span class="op">|</span> <span class="ident">utxoset</span>.<span class="ident">output_from_output_id</span>(<span class="ident">input</span>).<span class="ident">unwrap</span>().<span class="ident">amount</span>())
-                        .<span class="ident">sum</span>();
-
-                    <span class="kw">let</span> <span class="ident">output_1mt</span>: <span class="ident">u64</span> <span class="op">=</span>
-                        <span class="ident">tx</span>.<span class="ident">get_outputs</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">output</span><span class="op">|</span> <span class="ident">output</span>.<span class="ident">amount</span>()).<span class="ident">sum</span>();
-
-                    <span class="kw">let</span> <span class="ident">is_balanced</span> <span class="op">=</span> <span class="ident">output_1mt</span> <span class="op">==</span> <span class="ident">input_amt</span>;
-                    <span class="kw">if</span> <span class="op">!</span><span class="ident">is_balanced</span> {
-                        <span class="macro">info!</span>(<span class="string">&quot;inputs/outputs not balanced&quot;</span>);
-                    }
-                    <span class="ident">is_balanced</span>
-                } <span class="kw">else</span> {
-                    <span class="macro">info!</span>(<span class="string">&quot;no single receiver for inputs&quot;</span>);
-                    <span class="bool-val">false</span>
-                }
-            }
-            <span class="ident">TxType::Seed</span> =&gt; {
-                <span class="macro">println!</span>(<span class="string">&quot;TxType::Seed&quot;</span>);
-                <span class="comment">// TODO validate Seed tx correctly</span>
-                <span class="bool-val">true</span>
-            }
-            <span class="ident">TxType::Service</span> =&gt; {
-                <span class="macro">println!</span>(<span class="string">&quot;TxType::Service&quot;</span>);
-                <span class="comment">// TODO validate Service tx correctly</span>
-                <span class="bool-val">true</span>
-            }
         }
     }
 }
@@ -1268,10 +1224,13 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::block::PandaBlock</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::block_fee_manager::BlockFeeManager</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::blocks_database::BlocksDatabase</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::command_line_opts::CommandLineOpts</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::constants::Constants</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::fork_manager::ForkManager</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::keypair_store::KeypairStore</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::longest_chain_queue::LongestChainQueue</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::mempool::AbstractMempool</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::miniblock_mempool::MiniblockMempool</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::test_utilities::mock_mempool::MockMempool</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transaction::Transaction</span>;
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utxoset::AbstractUtxoSet</span>;
@@ -1285,6 +1244,7 @@
         },
         <span class="ident">utxoset::UtxoSet</span>,
     };
+    <span class="kw">use</span> <span class="ident">clap::Clap</span>;
     <span class="kw">use</span> <span class="ident">std::sync::Arc</span>;
     <span class="kw">use</span> <span class="ident">tokio::sync::RwLock</span>;
 
@@ -1303,6 +1263,7 @@
 
     <span class="attribute">#[<span class="ident">tokio::test</span>]</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">build_new_chain_test</span>() {
+        <span class="kw">let</span> <span class="ident">timestamp_generator</span> <span class="op">=</span> <span class="ident">make_timestamp_generator_for_test</span>();
         <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">Constants::new</span>());
         <span class="kw">let</span> <span class="ident">keypair</span> <span class="op">=</span> <span class="ident">Keypair::new</span>();
         <span class="kw">let</span> <span class="ident">genesis_block</span> <span class="op">=</span> <span class="ident">PandaBlock::new_genesis_block</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">0</span>, <span class="number">1</span>);
@@ -1315,6 +1276,21 @@
             <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">UtxoSet::new</span>(<span class="ident">constants</span>.<span class="ident">clone</span>()))));
         <span class="kw">let</span> <span class="ident">mock_mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">MockMempool::new</span>())));
+
+        <span class="kw">let</span> <span class="ident">command_line_opts</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">CommandLineOpts::parse_from</span>(<span class="kw-2">&amp;</span>[
+            <span class="string">&quot;pandacoin&quot;</span>,
+            <span class="string">&quot;--password&quot;</span>,
+            <span class="string">&quot;asdf&quot;</span>,
+        ]));
+        <span class="kw">let</span> <span class="ident">keypair_store</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>));
+
+        <span class="kw">let</span> <span class="ident">miniblock_mempool_mutex_ref</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">MiniblockMempool::new</span>(
+            <span class="ident">constants</span>.<span class="ident">clone</span>(),
+            <span class="ident">timestamp_generator</span>.<span class="ident">clone</span>(),
+            <span class="ident">keypair_store</span>.<span class="ident">clone</span>(),
+            <span class="ident">utxoset_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">mock_mempool_ref</span>.<span class="ident">clone</span>(),
+        ))));
 
         <span class="kw">let</span> <span class="ident">mock_block_1</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
             <span class="number">1</span>,
@@ -1400,11 +1376,12 @@
             <span class="ident">constants</span>.<span class="ident">clone</span>(),
             <span class="ident">utxoset_ref</span>.<span class="ident">clone</span>(),
             <span class="ident">mock_mempool_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">miniblock_mempool_mutex_ref</span>.<span class="ident">clone</span>(),
         )
         .<span class="kw">await</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_chain</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-        <span class="ident">blockchain</span>.<span class="ident">build_new_chain</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_6_2</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">new_chain</span>);
+        <span class="ident">blockchain</span>.<span class="ident">build_new_chain</span>(<span class="kw-2">&amp;</span><span class="ident">mock_block_6_2</span>, <span class="kw-2">&amp;mut</span> <span class="ident">new_chain</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">new_chain</span>.<span class="ident">len</span>(), <span class="number">4</span>);
         <span class="macro">assert_eq!</span>(<span class="ident">new_chain</span>[<span class="number">0</span>], [<span class="number">13</span>; <span class="number">32</span>]);
         <span class="macro">assert_eq!</span>(<span class="ident">new_chain</span>[<span class="number">1</span>], [<span class="number">14</span>; <span class="number">32</span>]);
@@ -1455,6 +1432,21 @@
         <span class="kw">let</span> <span class="ident">mock_mempool_ref</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AbstractMempool</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">MockMempool::new</span>())));
 
+        <span class="kw">let</span> <span class="ident">command_line_opts</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">CommandLineOpts::parse_from</span>(<span class="kw-2">&amp;</span>[
+            <span class="string">&quot;pandacoin&quot;</span>,
+            <span class="string">&quot;--password&quot;</span>,
+            <span class="string">&quot;asdf&quot;</span>,
+        ]));
+        <span class="kw">let</span> <span class="ident">keypair_store</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">KeypairStore::new_mock</span>(<span class="ident">command_line_opts</span>));
+
+        <span class="kw">let</span> <span class="ident">miniblock_mempool_ref</span> <span class="op">=</span> <span class="ident">Arc::new</span>(<span class="ident">RwLock::new</span>(<span class="ident">Box::new</span>(<span class="ident">MiniblockMempool::new</span>(
+            <span class="ident">constants</span>.<span class="ident">clone</span>(),
+            <span class="ident">timestamp_generator</span>.<span class="ident">clone</span>(),
+            <span class="ident">keypair_store</span>.<span class="ident">clone</span>(),
+            <span class="ident">utxoset_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">mock_mempool_ref</span>.<span class="ident">clone</span>(),
+        ))));
+
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">blockchain</span> <span class="op">=</span> <span class="ident">Blockchain::new</span>(
             <span class="ident">fork_manager</span>,
             <span class="ident">longest_chain_queue</span>,
@@ -1463,6 +1455,7 @@
             <span class="ident">constants</span>.<span class="ident">clone</span>(),
             <span class="ident">utxoset_ref</span>.<span class="ident">clone</span>(),
             <span class="ident">mock_mempool_ref</span>.<span class="ident">clone</span>(),
+            <span class="ident">miniblock_mempool_ref</span>.<span class="ident">clone</span>(),
         )
         .<span class="kw">await</span>;
         <span class="comment">//</span>
@@ -1542,6 +1535,7 @@
             <span class="macro">vec!</span>[],
             <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
+
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_3_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_3</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
@@ -1552,8 +1546,8 @@
             <span class="ident">timestamp_generator</span>.<span class="ident">get_timestamp</span>(),
             <span class="macro">vec!</span>[<span class="ident">tx_3</span>],
         ));
-        <span class="comment">// block_c_2 spends the output in block_b and creates a new output</span>
 
+        <span class="comment">// block_c_2 spends the output in block_b and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_3_2_input</span> <span class="op">=</span> <span class="ident">OutputIdProto::new</span>(<span class="kw-2">*</span><span class="ident">tx_3_2</span>.<span class="ident">get_hash</span>(), <span class="number">0</span>);
         <span class="kw">let</span> <span class="ident">mock_block_3_2</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">RawBlock</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Box::new</span>(<span class="ident">MockRawBlockForBlockchain::new</span>(
@@ -1576,6 +1570,7 @@
             <span class="macro">vec!</span>[],
             <span class="ident">keypair</span>.<span class="ident">get_secret_key</span>(),
         );
+
         <span class="comment">// block_d_2 spends the output in block_c and creates a new output</span>
         <span class="ident">timestamp_generator</span>.<span class="ident">advance</span>(<span class="number">10000</span>);
         <span class="kw">let</span> <span class="ident">output_4_2</span> <span class="op">=</span> <span class="ident">OutputProto::new</span>(<span class="kw-2">*</span><span class="ident">keypair</span>.<span class="ident">get_public_key</span>(), <span class="number">1</span>);
@@ -1670,5 +1665,4 @@
 }
 </code></pre></div>
 </section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pandacoin" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
-    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
 </body></html>
