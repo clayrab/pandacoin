@@ -36,27 +36,46 @@ pub struct MerkleTree {
 ///        |  |  |  | |  |  |  |
 ///       T0 T1 T2 T3 T4 T5 T6 T7 <- leafs are transaction hashes
 /// ```
+/// If the number of tx in a block is not exactly equal to some 2^n, we pad the tx set(leafs) with [0x0]s
+/// We refer to the upper/inner nodes of the tree as "nodes".
+/// For N leafs we need N-1 nodes, we will also store a [0x0] at the 0 position of the nodes array. This
+/// makes the indexes in the diagram above look the way they do and simplifies the logic/math of mapping
+/// those indexes into the nodes Vec and also gives us some valid data to return in case we want a merkle
+/// tree built from an empty set of Transactions.
+///  
 impl MerkleTree {
     pub fn new<'a, I>(iterator: I) -> Self
     where
         I: Iterator<Item = &'a Transaction>,
     {
+        MerkleTree::new_from_hashes(iterator.map(|tx| tx.get_hash()))
+    }
+    pub fn new_from_hashes<'a, I>(iterator: I) -> Self
+    where
+        I: Iterator<Item = &'a Sha256Hash>,
+    {
         let mut num_items: usize = 0;
         let mut leafs: Vec<Sha256Hash> = vec![];
 
-        for transaction in iterator {
+        for hash in iterator {
             num_items += 1;
-            leafs.push(*transaction.get_hash());
+            leafs.push(*hash);
         }
         let mut size = MerkleTree::next_power_of_2(num_items);
         for _i in 1..size - num_items {
             leafs.push([0; 32]);
         }
+        // if we are building a merkle tree from an empty set of transactions, it will
+        // make things easier if we still have a valid merkle tree with root [0x0;32]
         if size == 0 {
             size = 1;
         }
         let mut nodes: Vec<Option<Sha256Hash>> = vec![None; size];
+        // store a [0x0] as described above
         nodes[0] = Some([0; 32]);
+        // Build the tree by computing the hashes recursively.
+        // We must iterate through the tree starting at the bottom. For example, these two while loops would
+        // iterate the size-1 indexes(1 to 7) in this order: 1,3,5,7,2,6,4.
         let mut starting_index = 1;
         let mut index = starting_index;
         while starting_index < size {
@@ -68,7 +87,6 @@ impl MerkleTree {
             starting_index *= 2;
             index = starting_index;
         }
-        println!("MerkleTree new {}", size);
         MerkleTree { size, leafs, nodes }
     }
 
@@ -77,21 +95,29 @@ impl MerkleTree {
         leafs: &Vec<Sha256Hash>,
         index: usize,
     ) -> Sha256Hash {
+        // check if the nodes already have this hash memoized, otherwise, we will compute the hash
         if nodes[index].is_some() {
             return nodes[index].unwrap();
-        }
-        if (index + 1) % 2 == 0 {
-            leafs[(index - 1) >> 1]
         } else {
-            let mut next_height = 2;
-            while (index - next_height) % (next_height << 1) != 0 {
-                next_height <<= 1;
+            if (index + 1) % 2 == 0 {
+                leafs[(index - 1) >> 1]
+            } else {
+                let mut next_height = 2;
+                while (index - next_height) % (next_height << 1) != 0 {
+                    next_height <<= 1;
+                }
+                let hash_left = MerkleTree::compute_node_hash_at_index(
+                    nodes,
+                    leafs,
+                    index - (next_height >> 1),
+                );
+                let hash_right = MerkleTree::compute_node_hash_at_index(
+                    nodes,
+                    leafs,
+                    index + (next_height >> 1),
+                );
+                hash_bytes(&[hash_left, hash_right].concat())
             }
-            let hash_left =
-                MerkleTree::compute_node_hash_at_index(nodes, leafs, index - (next_height >> 1));
-            let hash_right =
-                MerkleTree::compute_node_hash_at_index(nodes, leafs, index + (next_height >> 1));
-            hash_bytes(&[hash_left, hash_right].concat())
         }
     }
     pub fn get_nodes(&self) -> &[Option<Sha256Hash>] {

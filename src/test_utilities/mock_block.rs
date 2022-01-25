@@ -203,3 +203,32 @@ impl RawBlock for MockRawBlockForForkManager {
         &self.merkle_tree
     }
 }
+
+/// This Mock RawBlock is used for testing the miniblock manager
+#[derive(Debug)]
+pub struct MockRawBlockForMiniBlockManager {
+    block_id: u32,
+    mini_blocks: Vec<MiniBlock>,
+    merkle_tree: MerkleTree,
+}
+impl MockRawBlockForMiniBlockManager {
+    pub fn new(block_id: u32, mini_blocks: Vec<MiniBlock>) -> Self {
+        MockRawBlockForMiniBlockManager {
+            block_id,
+            mini_blocks,
+            merkle_tree: MerkleTree::new(vec![].iter()),
+        }
+    }
+}
+
+impl RawBlock for MockRawBlockForMiniBlockManager {
+    fn get_id(&self) -> u32 {
+        self.block_id
+    }
+    fn get_mini_blocks(&self) -> &Vec<MiniBlock> {
+        &self.mini_blocks
+    }
+    fn get_merkle_tree(&self) -> &MerkleTree {
+        &self.merkle_tree
+    }
+}

@@ -1,14 +1,18 @@
-use crate::crypto::{hash_bytes, sign_message};
+use crate::blockchain::ForkChains;
+use crate::crypto::{hash_bytes, sign_message, verify_bytes_message};
 use crate::panda_protos::transaction_proto::TxType;
 use crate::panda_protos::TransactionProto;
 use crate::panda_protos::{OutputIdProto, OutputProto};
 use crate::types::{Secp256k1SignatureCompact, Sha256Hash};
+use crate::utxoset::AbstractUtxoSet;
+use futures::StreamExt;
+use log::{error, info};
 use prost::Message;
 use secp256k1::SecretKey;
 use std::convert::{TryFrom, TryInto};
 use std::io::Cursor;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Transaction {
     hash: Sha256Hash,
     transaction_proto: TransactionProto,
@@ -31,6 +35,7 @@ impl Transaction {
             txtype: txtype as i32,
             message,
             signature: vec![0; 64],
+            broker: vec![0; 32],
         };
         let hash = hash_bytes(&transaction_proto.serialize());
         let sig = sign_message(&hash, secret_key);
@@ -75,8 +80,92 @@ impl Transaction {
     pub fn get_signature(&self) -> &Vec<u8> {
         &self.transaction_proto.signature
     }
+    pub fn get_broker(&self) -> &Vec<u8> {
+        &self.transaction_proto.broker
+    }
     pub fn get_transaction_proto(&self) -> &TransactionProto {
         &self.transaction_proto
+    }
+    /// Validate a transaction.
+    /// fork_chains is only needed for validaton in a fork branch.
+    pub async fn validate_transaction(
+        utxoset: &Box<dyn AbstractUtxoSet + Send + Sync>,
+        previous_block_id: u32,
+        tx: &Transaction,
+        fork_chains: Option<&ForkChains>,
+    ) -> bool {
+        match tx.get_txtype() {
+            TxType::Normal => {
+                if tx.get_inputs().is_empty() && tx.get_outputs().is_empty() {
+                    return true;
+                }
+                // let utxoset = self.context.utxoset_ref.read().await;
+                if let Some(address) = utxoset.get_receiver_for_inputs(tx.get_inputs()) {
+                    if !verify_bytes_message(tx.get_hash(), tx.get_signature(), &address) {
+                        error!("tx signature invalid");
+                        return false;
+                    };
+                    // validate our outputs
+                    // TODO: remove this clone?
+                    let inputs_are_valid = futures::stream::iter(tx.get_inputs())
+                        .all(|input| {
+                            if fork_chains.is_none() {
+                                utxoset.is_output_spendable_at_block_id(input, previous_block_id)
+                            } else {
+                                if fork_chains.unwrap().old_chain.is_empty() {
+                                    info!("is_output_spendable_at_block_id");
+                                    utxoset
+                                        .is_output_spendable_at_block_id(input, previous_block_id)
+                                } else {
+                                    info!("is_output_spendable_in_fork_branch");
+                                    utxoset.is_output_spendable_in_fork_branch(
+                                        input,
+                                        fork_chains.unwrap(),
+                                    )
+                                }
+                            }
+                        })
+                        .await;
+
+                    if !inputs_are_valid {
+                        info!("tx invalid inputs");
+                        return false;
+                    }
+                    // validate that inputs are unspent
+                    let input_amt: u64 = tx
+                        .get_inputs()
+                        .iter()
+                        .map(|input| utxoset.output_from_output_id(input).unwrap().amount())
+                        .sum();
+
+                    let output_amt: u64 =
+                        tx.get_outputs().iter().map(|output| output.amount()).sum();
+
+                    let is_balanced = output_amt <= input_amt;
+                    if !is_balanced {
+                        info!("inputs/outputs not balanced");
+                    }
+                    is_balanced
+                } else {
+                    info!("no single receiver for inputs");
+                    false
+                }
+            }
+            TxType::Seed => {
+                println!("TxType::Seed");
+                if previous_block_id == 0 {
+                    true
+                } else {
+                    false
+                }
+                // TODO validate Seed tx correctly
+            }
+            TxType::Service => {
+                println!("TxType::Service");
+                // TODO validate Service tx correctly
+                true
+            }
+        }
     }
 }
 

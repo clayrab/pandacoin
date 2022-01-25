@@ -6,11 +6,10 @@ use tokio::sync::RwLock;
 
 use crate::blocks_database::BlocksDatabase;
 use crate::constants::Constants;
-use crate::crypto::verify_bytes_message;
 use crate::fork_manager::ForkManager;
 use crate::longest_chain_queue::LongestChainQueue;
 use crate::mempool::AbstractMempool;
-use crate::panda_protos::transaction_proto::TxType;
+use crate::miniblock_mempool::MiniblockMempool;
 use crate::transaction::Transaction;
 use crate::types::Sha256Hash;
 use crate::utxoset::AbstractUtxoSet;
@@ -59,6 +58,7 @@ struct BlockchainContext {
     constants: Arc<Constants>,
     utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
     mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
+    miniblock_mempool_ref: Arc<RwLock<Box<MiniblockMempool>>>,
 }
 
 #[derive(Debug)]
@@ -134,16 +134,22 @@ impl AbstractBlockchain for Blockchain {
                     if is_first_block || is_new_lc_tip {
                         // First Block or we'e new tip of the longest chain
                         self.longest_chain_queue.roll_forward(block.get_hash());
-                        let mut utxoset = self.context.utxoset_ref.write().await;
-                        utxoset.roll_forward(&block);
+                        {
+                            let mut utxoset = self.context.utxoset_ref.write().await;
+                            utxoset.roll_forward(&block);
+                        }
                         let mut mempool = self.context.mempool_ref.write().await;
-                        mempool.roll_forward(&block);
+                        mempool.roll_forward(&block).await;
+                        let mut miniblock_mempool =
+                            self.context.miniblock_mempool_ref.write().await;
+                        miniblock_mempool.roll_forward(&block).await;
+
                         self.roll_forward_max_reorg(&block).await;
                         self.blocks_database.insert(block);
                         // self.storage.roll_forward(&block).await;
                         AddBlockEvent::AcceptedAsLongestChain
                     } else {
-                        // We are not on the longest chain
+                        // We are on the longest chain
                         if fork_chains.new_chain.len() > fork_chains.old_chain.len() {
                             assert_eq!(
                                 fork_chains.new_chain.len(),
@@ -159,10 +165,16 @@ impl AbstractBlockchain for Blockchain {
                                 let block: &Box<dyn RawBlock> =
                                     self.blocks_database.get_block_by_hash(block_hash).unwrap();
                                 self.longest_chain_queue.roll_back();
-                                let mut utxoset = self.context.utxoset_ref.write().await;
-                                utxoset.roll_back(block);
+                                {
+                                    let mut utxoset = self.context.utxoset_ref.write().await;
+                                    utxoset.roll_back(block);
+                                }
                                 let mut mempool = self.context.mempool_ref.write().await;
                                 mempool.roll_back(block);
+                                let mut miniblock_mempool =
+                                    self.context.miniblock_mempool_ref.write().await;
+                                miniblock_mempool.roll_back(&block).await;
+
                                 // self.storage.roll_back(&block);
                             }
 
@@ -171,10 +183,15 @@ impl AbstractBlockchain for Blockchain {
                                 let block: &Box<dyn RawBlock> =
                                     self.blocks_database.get_block_by_hash(block_hash).unwrap();
                                 self.longest_chain_queue.roll_forward(block.get_hash());
-                                let mut utxoset = self.context.utxoset_ref.write().await;
-                                utxoset.roll_forward(block);
+                                {
+                                    let mut utxoset = self.context.utxoset_ref.write().await;
+                                    utxoset.roll_forward(block);
+                                }
                                 let mut mempool = self.context.mempool_ref.write().await;
-                                mempool.roll_forward(block);
+                                mempool.roll_forward(block).await;
+                                let mut miniblock_mempool =
+                                    self.context.miniblock_mempool_ref.write().await;
+                                miniblock_mempool.roll_forward(&block).await;
                                 // self.storage.roll_forward(block).await;
                             }
                             // Wind the old chain as a fork chain
@@ -188,7 +205,7 @@ impl AbstractBlockchain for Blockchain {
 
                             AddBlockEvent::AcceptedAsNewLongestChain
                         } else {
-                            // we're just building on a new chain. Won't take over... yet!
+                            // we're just building on a fork...
                             let mut utxoset = self.context.utxoset_ref.write().await;
                             utxoset.roll_forward_on_fork(&block);
 
@@ -212,6 +229,7 @@ impl Blockchain {
         constants: Arc<Constants>,
         utxoset_ref: Arc<RwLock<Box<dyn AbstractUtxoSet + Send + Sync>>>,
         mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>>,
+        miniblock_mempool_ref: Arc<RwLock<Box<MiniblockMempool>>>,
     ) -> Self {
         Blockchain {
             longest_chain_queue,
@@ -222,6 +240,7 @@ impl Blockchain {
                 constants,
                 utxoset_ref,
                 mempool_ref,
+                miniblock_mempool_ref,
             },
         }
     }
@@ -235,6 +254,11 @@ impl Blockchain {
                 )
                 .unwrap(),
             );
+
+            let mut miniblock_mempool = self.context.miniblock_mempool_ref.write().await;
+            miniblock_mempool
+                .roll_forward_max_reorg(current_block)
+                .await;
         }
     }
     /// If the block is in the fork
@@ -346,83 +370,17 @@ impl Blockchain {
                 return false;
             }
             // all the transactions must be valid
+            let utxoset = self.context.utxoset_ref.read().await;
             futures::stream::iter(block.transactions_iter())
                 .all(|transaction| {
-                    self.validate_transaction(previous_block, transaction, fork_chains)
+                    Transaction::validate_transaction(
+                        &utxoset,
+                        previous_block.get_id(),
+                        transaction,
+                        Some(fork_chains),
+                    )
                 })
                 .await
-        }
-    }
-
-    async fn validate_transaction(
-        &self,
-        previous_block: &Box<dyn RawBlock>,
-        tx: &Transaction,
-        fork_chains: &ForkChains,
-    ) -> bool {
-        //println!("validate_transaction type{}");
-        match tx.get_txtype() {
-            TxType::Normal => {
-                if tx.get_inputs().is_empty() && tx.get_outputs().is_empty() {
-                    return true;
-                }
-                let utxoset = self.context.utxoset_ref.read().await;
-                if let Some(address) = utxoset.get_receiver_for_inputs(tx.get_inputs()) {
-                    println!("verify sig {:?}", address);
-                    if !verify_bytes_message(tx.get_hash(), tx.get_signature(), &address) {
-                        error!("tx signature invalid");
-                        return false;
-                    };
-                    // validate our outputs
-                    // TODO: remove this clone?
-                    let inputs_iterator_stream = futures::stream::iter(tx.get_inputs());
-                    let inputs_are_valid = inputs_iterator_stream
-                        .all(|input| {
-                            if fork_chains.old_chain.is_empty() {
-                                info!("is_output_spendable_at_block_id");
-                                utxoset
-                                    .is_output_spendable_at_block_id(input, previous_block.get_id())
-                            } else {
-                                info!("is_output_spendable_in_fork_branch");
-                                utxoset.is_output_spendable_in_fork_branch(input, fork_chains)
-                            }
-                        })
-                        .await;
-
-                    if !inputs_are_valid {
-                        info!("tx invalid inputs");
-                        return false;
-                    }
-                    // validate that inputs are unspent
-                    let input_amt: u64 = tx
-                        .get_inputs()
-                        .iter()
-                        .map(|input| utxoset.output_from_output_id(input).unwrap().amount())
-                        .sum();
-
-                    let output_1mt: u64 =
-                        tx.get_outputs().iter().map(|output| output.amount()).sum();
-
-                    let is_balanced = output_1mt == input_amt;
-                    if !is_balanced {
-                        info!("inputs/outputs not balanced");
-                    }
-                    is_balanced
-                } else {
-                    info!("no single receiver for inputs");
-                    false
-                }
-            }
-            TxType::Seed => {
-                println!("TxType::Seed");
-                // TODO validate Seed tx correctly
-                true
-            }
-            TxType::Service => {
-                println!("TxType::Service");
-                // TODO validate Service tx correctly
-                true
-            }
         }
     }
 }
@@ -433,10 +391,13 @@ mod tests {
     use crate::block::PandaBlock;
     use crate::block_fee_manager::BlockFeeManager;
     use crate::blocks_database::BlocksDatabase;
+    use crate::command_line_opts::CommandLineOpts;
     use crate::constants::Constants;
     use crate::fork_manager::ForkManager;
+    use crate::keypair_store::KeypairStore;
     use crate::longest_chain_queue::LongestChainQueue;
     use crate::mempool::AbstractMempool;
+    use crate::miniblock_mempool::MiniblockMempool;
     use crate::test_utilities::mock_mempool::MockMempool;
     use crate::transaction::Transaction;
     use crate::utxoset::AbstractUtxoSet;
@@ -450,6 +411,7 @@ mod tests {
         },
         utxoset::UtxoSet,
     };
+    use clap::Clap;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -468,6 +430,7 @@ mod tests {
 
     #[tokio::test]
     async fn build_new_chain_test() {
+        let timestamp_generator = make_timestamp_generator_for_test();
         let constants = Arc::new(Constants::new());
         let keypair = Keypair::new();
         let genesis_block = PandaBlock::new_genesis_block(*keypair.get_public_key(), 0, 1);
@@ -480,6 +443,21 @@ mod tests {
             Arc::new(RwLock::new(Box::new(UtxoSet::new(constants.clone()))));
         let mock_mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
             Arc::new(RwLock::new(Box::new(MockMempool::new())));
+
+        let command_line_opts = Arc::new(CommandLineOpts::parse_from(&[
+            "pandacoin",
+            "--password",
+            "asdf",
+        ]));
+        let keypair_store = Arc::new(KeypairStore::new_mock(command_line_opts));
+
+        let miniblock_mempool_mutex_ref = Arc::new(RwLock::new(Box::new(MiniblockMempool::new(
+            constants.clone(),
+            timestamp_generator.clone(),
+            keypair_store.clone(),
+            utxoset_ref.clone(),
+            mock_mempool_ref.clone(),
+        ))));
 
         let mock_block_1: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
             1,
@@ -565,6 +543,7 @@ mod tests {
             constants.clone(),
             utxoset_ref.clone(),
             mock_mempool_ref.clone(),
+            miniblock_mempool_mutex_ref.clone(),
         )
         .await;
 
@@ -620,6 +599,21 @@ mod tests {
         let mock_mempool_ref: Arc<RwLock<Box<dyn AbstractMempool + Send + Sync>>> =
             Arc::new(RwLock::new(Box::new(MockMempool::new())));
 
+        let command_line_opts = Arc::new(CommandLineOpts::parse_from(&[
+            "pandacoin",
+            "--password",
+            "asdf",
+        ]));
+        let keypair_store = Arc::new(KeypairStore::new_mock(command_line_opts));
+
+        let miniblock_mempool_ref = Arc::new(RwLock::new(Box::new(MiniblockMempool::new(
+            constants.clone(),
+            timestamp_generator.clone(),
+            keypair_store.clone(),
+            utxoset_ref.clone(),
+            mock_mempool_ref.clone(),
+        ))));
+
         let mut blockchain = Blockchain::new(
             fork_manager,
             longest_chain_queue,
@@ -628,6 +622,7 @@ mod tests {
             constants.clone(),
             utxoset_ref.clone(),
             mock_mempool_ref.clone(),
+            miniblock_mempool_ref.clone(),
         )
         .await;
         //
@@ -707,6 +702,7 @@ mod tests {
             vec![],
             keypair.get_secret_key(),
         );
+
         timestamp_generator.advance(10000);
         let output_3_input = OutputIdProto::new(*tx_3.get_hash(), 0);
         let mock_block_3: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
@@ -717,8 +713,8 @@ mod tests {
             timestamp_generator.get_timestamp(),
             vec![tx_3],
         ));
-        // block_c_2 spends the output in block_b and creates a new output
 
+        // block_c_2 spends the output in block_b and creates a new output
         timestamp_generator.advance(10000);
         let output_3_2_input = OutputIdProto::new(*tx_3_2.get_hash(), 0);
         let mock_block_3_2: Box<dyn RawBlock> = Box::new(MockRawBlockForBlockchain::new(
@@ -741,6 +737,7 @@ mod tests {
             vec![],
             keypair.get_secret_key(),
         );
+
         // block_d_2 spends the output in block_c and creates a new output
         timestamp_generator.advance(10000);
         let output_4_2 = OutputProto::new(*keypair.get_public_key(), 1);

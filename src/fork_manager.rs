@@ -336,7 +336,6 @@ impl ForkManager {
         blocks_database: &mut BlocksDatabase,
         longest_chain_queue: &LongestChainQueue,
     ) {
-        println!("** roll forward ** {:?}", next_block.get_hash().clone());
         // the fork_block_pointer for next_block is the same as it's parent's. Insert it into fork_block_pointers.
         self.fork_block_pointers.insert(
             *next_block.get_hash(),
@@ -389,8 +388,6 @@ impl ForkManager {
                     .insert(*next_block.get_hash());
             } else {
                 // the previous block is a ForkBlock which has children(and is not the root).
-                // TODO Are we excercising this with a test? We need to exercise this in block_fee_manager also.
-                println!("TODO Are we excercising this with a test? We need to exercise this in block_fee_manager also.");
                 // TODO don't we need to insert the new forkblock as a child of the the one at
                 //      next_block's parent?
                 self.fork_blocks
@@ -409,7 +406,6 @@ impl ForkManager {
             .unwrap()
             .get_id();
         if next_block.get_id() >= self.context.constants.get_max_reorg() + root_id {
-            println!("move root!!");
             // TODO Can we get rid of some of these and just get them from reorg_block?
             let reorg_block_id = next_block.get_id() - (self.context.constants.get_max_reorg() - 1);
             let reorg_block_hash = longest_chain_queue

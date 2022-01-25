@@ -83,7 +83,7 @@ impl PandaBlock {
         // make a merkle tree from the tx in the mini blocks
         let merkle_tree = MerkleTree::new(TransactionsIter::new(&mini_blocks));
         let fee = TransactionsIter::new(&mini_blocks)
-            .map(|tx| utxoset.transaction_fees(tx.get_transaction_proto()))
+            .map(|tx| utxoset.get_fee_of_transaction(tx.get_transaction_proto()))
             .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
             .unwrap();
         PandaBlock {
@@ -226,7 +226,7 @@ impl<'a> Iterator for TransactionsIter<'a> {
                         ret_transaction = Some(transaction);
                     }
                     None => {
-                        self.index = 0;
+                        self.index = 1;
                         self.mini_block_index += 1;
                     }
                 },
@@ -268,6 +268,7 @@ mod test {
             txtype: TxType::Normal as i32,
             message: vec![],
             signature: vec![],
+            broker: vec![0; 32],
         };
         let transaction_proto_2 = TransactionProto {
             timestamp: 12345,
@@ -276,6 +277,7 @@ mod test {
             txtype: TxType::Normal as i32,
             message: vec![],
             signature: vec![],
+            broker: vec![0; 32],
         };
         let mini_block_proto = MiniBlockProto {
             receiver: keypair_1.get_public_key().serialize().to_vec(),

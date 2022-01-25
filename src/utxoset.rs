@@ -5,6 +5,7 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIter
 use crate::block::RawBlock;
 use crate::blockchain::ForkChains;
 use crate::constants::Constants;
+use crate::panda_protos::transaction_proto::TxType;
 use crate::panda_protos::{OutputIdProto, OutputProto, TransactionProto};
 use crate::types::Sha256Hash;
 use std::fmt::Debug;
@@ -112,7 +113,7 @@ pub trait AbstractUtxoSet: Debug {
     fn get_total_for_inputs(&self, output_ids: Vec<OutputIdProto>) -> Option<u64>;
     fn get_receiver_for_inputs(&self, output_ids: &Vec<OutputIdProto>) -> Option<Vec<u8>>;
     fn output_from_output_id(&self, output_id: &OutputIdProto) -> Option<OutputProto>;
-    fn transaction_fees(&self, tx: &TransactionProto) -> u64;
+    fn get_fee_of_transaction(&self, tx: &TransactionProto) -> u64;
 }
 
 #[derive(Debug)]
@@ -489,16 +490,19 @@ impl AbstractUtxoSet for UtxoSet {
         }
     }
     /// Computes the fee(leftover of output amount - input amount) for a given unspent transaction.
-    fn transaction_fees(&self, tx: &TransactionProto) -> u64 {
+    fn get_fee_of_transaction(&self, tx: &TransactionProto) -> u64 {
         let input_amt: u64 = tx
             .inputs
             .iter()
             .map(|input| self.output_from_output_id(input).unwrap().amount())
             .sum();
-
         let output_amt: u64 = tx.outputs.iter().map(|output| output.amount()).sum();
-        // TODO protect this from overflows, this needs to be asserted before computed or something.
-        input_amt - output_amt
+        if input_amt >= output_amt {
+            input_amt - output_amt
+        } else {
+            assert!(tx.txtype == TxType::Seed as i32);
+            0
+        }
     }
 }
 
@@ -961,6 +965,7 @@ mod test {
                 txtype: TxType::Seed as i32,
                 message: vec![],
                 signature: vec![0; 64],
+                broker: vec![0; 32],
             };
             let hash = hash_bytes(&block_1_tx.serialize());
             let input_for_spent_output = OutputIdProto::new(hash, 0);
@@ -971,6 +976,7 @@ mod test {
                 txtype: TxType::Normal as i32,
                 message: vec![],
                 signature: vec![0; 64],
+                broker: vec![0; 32],
             };
 
             block_1_txs.push(block_1_tx);
@@ -989,14 +995,14 @@ mod test {
         utxo_set.roll_forward(&mock_block_1);
 
         for block_2_tx in block_2_txs.iter() {
-            let fee = utxo_set.transaction_fees(block_2_tx);
+            let fee = utxo_set.get_fee_of_transaction(block_2_tx);
             assert_eq!(1, fee);
         }
 
         //utxo_set.roll_forward(&mock_block_2);
         let total_fee = block_2_txs
             .iter()
-            .map(|tx| utxo_set.transaction_fees(tx))
+            .map(|tx| utxo_set.get_fee_of_transaction(tx))
             .reduce(|tx_fees_a, tx_fees_b| tx_fees_a + tx_fees_b)
             .unwrap();
         assert_eq!(4, total_fee);
