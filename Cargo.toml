@@ -32,7 +32,7 @@ log = "0.4.14"
 prost = "0.8"
 prost-build = { version = "0.8", optional = true } # optional for the build_protos bin target
 # Only necessary if using Protobuf well-known types:
-prost-types = "0.8"
+prost-types = "0.10"
 # rand = "0.8.3"
 rayon = "1.5"
 rpassword = "5.0"
