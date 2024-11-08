@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["globals_init",""],["mock_block",""],["mock_blockchain",""],["mock_constants",""],["mock_mempool",""],["mock_timestamp_generator",""],["mock_utxoset",""]]});
+window.SIDEBAR_ITEMS = {"mod":["globals_init","mock_block","mock_blockchain","mock_constants","mock_mempool","mock_timestamp_generator","mock_utxoset"]};

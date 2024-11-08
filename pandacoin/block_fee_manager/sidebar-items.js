@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["BlockFeeAggregateForkData",""],["BlockFeeManager",""],["BlockFeeManagerContext",""]]});
+window.SIDEBAR_ITEMS = {"struct":["BlockFeeAggregateForkData","BlockFeeManager","BlockFeeManagerContext"]};

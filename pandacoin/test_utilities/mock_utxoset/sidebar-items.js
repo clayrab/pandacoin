@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["MockUtxoSet",""]]});
+window.SIDEBAR_ITEMS = {"struct":["MockUtxoSet"]};

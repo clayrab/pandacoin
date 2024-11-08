@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["MerkleTree",""],["MerkleTreeSubTree",""]]});
+window.SIDEBAR_ITEMS = {"struct":["MerkleTree","MerkleTreeSubTree"]};

@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ForkBlock",""],["ForkManager","Fork Manager"],["ForkManagerContext",""]]});
+window.SIDEBAR_ITEMS = {"struct":["ForkBlock","ForkManager","ForkManagerContext"]};

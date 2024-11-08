@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["MockMempool",""]]});
+window.SIDEBAR_ITEMS = {"struct":["MockMempool"]};

@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["TxType",""]]});
+window.SIDEBAR_ITEMS = {"enum":["TxType"]};

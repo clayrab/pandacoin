@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["LongestChainQueue",""]]});
+window.SIDEBAR_ITEMS = {"struct":["LongestChainQueue"]};

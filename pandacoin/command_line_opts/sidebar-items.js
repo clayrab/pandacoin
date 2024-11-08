@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["CommandLineOpts","This is the Clap options structure which stores all command line flags passed by the user to the application"]]});
+window.SIDEBAR_ITEMS = {"struct":["CommandLineOpts"]};

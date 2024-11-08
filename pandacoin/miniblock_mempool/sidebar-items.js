@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["AddMiniBlockEvent","Although it is technically possible to allow MiniBlocks which conflict with"]],"struct":[["MiniblockMempool","This structure will keep track of the known miniblocks which have been sent by other nodes and will invalidate them when any of their transactions are used."]]});
+window.SIDEBAR_ITEMS = {"enum":["AddMiniBlockEvent"],"struct":["MiniblockMempool"]};

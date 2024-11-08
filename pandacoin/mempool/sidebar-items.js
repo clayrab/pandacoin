@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["Mempool",""]],"trait":[["AbstractMempool",""]]});
+window.SIDEBAR_ITEMS = {"struct":["Mempool"],"trait":["AbstractMempool"]};

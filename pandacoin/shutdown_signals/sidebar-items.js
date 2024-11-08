@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["signal_for_shutdown",""]]});
+window.SIDEBAR_ITEMS = {"fn":["signal_for_shutdown"]};

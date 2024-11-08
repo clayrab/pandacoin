@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["TREASURY","Initial Treasury"]],"enum":[["AddBlockEvent","Enumerated types of `Transaction`s to be handed by consensus"]],"struct":[["Blockchain",""],["ForkChains",""]],"trait":[["AbstractBlockchain",""]]});
+window.SIDEBAR_ITEMS = {"constant":["TREASURY"],"enum":["AddBlockEvent"],"struct":["Blockchain","ForkChains"],"trait":["AbstractBlockchain"]};
